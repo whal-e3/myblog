@@ -3,12 +3,13 @@ import * as Plugin from "./quartz/plugins"
 
 /**
  * Quartz 4 Configuration
+ * Personalized by sunhyuk
  *
  * See https://quartz.jzhao.xyz/configuration for more information.
  */
 const config: QuartzConfig = {
   configuration: {
-    pageTitle: "Quartz 4",
+    pageTitle: "SunHyuk's blog",
     pageTitleSuffix: "",
     enableSPA: true,
     enablePopovers: true,
