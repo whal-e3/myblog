@@ -8,6 +8,10 @@ git remote set-url origin REMOTE-URL
 npx quartz sync --no-pull
 ```
 
+```
+# How to post.
+```
+
 ## blog management structure
 
 - blogging env: Obsidian
