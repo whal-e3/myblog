@@ -1,8 +1,8 @@
 ---
-title: main
-description: temp main for mr.radio wargame website dev log
-date: 2026-03-06
-lastmod: 2026-03-06
+title: Enjoy virtual RF hacking with mrradio.kr
+description: About making mrradio.kr. The RF wargame website
+date: 2026-03-13
+lastmod: 2026-03-13
 draft: true
 tags:
 authors:
@@ -16,9 +16,5 @@ difficulty:
 series:
 ---
 # main
-
-(draft)
-
-![[스크린샷 2026-03-06 161443.png]]
 
 ![[스크린샷 2026-03-06 145748.png]]
