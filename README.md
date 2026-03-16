@@ -9,7 +9,7 @@ npx quartz sync --no-pull
 ```
 
 ```
-# How to post.
+# Just `git push` to post.
 ```
 
 ## blog management structure
