@@ -7,3 +7,5 @@ Hacking, Space and AI...
 ![[content/Assets/walle.png|200]]
 
 "Passionate about space, computers and AI. Striving to create value."
+
+[[about|Dossier]]
