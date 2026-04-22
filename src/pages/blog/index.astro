@@ -1,0 +1,352 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostCard from "../../components/PostCard.astro";
+import Sidebar from "../../components/Sidebar.astro";
+import { getCollection } from "astro:content";
+
+const now = new Date();
+const posts = (await getCollection("blog"))
+  .filter((p) => !p.data.draft)
+  .filter((p) => !p.data.publishDate || p.data.publishDate <= now)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// Collect every tag with count
+const tagCounts = new Map<string, number>();
+for (const p of posts) {
+  for (const t of p.data.tags) {
+    tagCounts.set(t, (tagCounts.get(t) || 0) + 1);
+  }
+}
+const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<BaseLayout title="Blog" description="Posts about hacking, space, and AI." sidebar>
+  <h1 class="section-title">All posts</h1>
+
+  {posts.length === 0 ? (
+    <p class="text-muted">No posts yet.</p>
+  ) : (
+    <>
+      <div class="blog-filters">
+        <input
+          type="search"
+          id="post-search"
+          class="search-input"
+          placeholder="Search posts…"
+          autocomplete="off"
+        />
+
+        <details id="tag-filter" class="tag-dropdown">
+          <summary>
+            <span>Tags</span>
+            <span id="tag-filter-count" class="filter-count" hidden>0</span>
+            <span class="caret">▾</span>
+          </summary>
+          <div class="tag-options">
+            {allTags.map(([tag, count]) => (
+              <label class="tag-option">
+                <input type="checkbox" value={tag} />
+                <span class="tag-option-name">{tag}</span>
+                <span class="tag-option-count">{count}</span>
+              </label>
+            ))}
+          </div>
+        </details>
+
+        <button type="button" id="tag-filter-clear" class="tag-clear">Clear</button>
+
+        <div id="result-count" class="result-count">{posts.length} posts</div>
+      </div>
+
+      <div id="post-list" class="post-list">
+        {posts.map((post) => (
+          <div
+            class="post-row"
+            data-tags={post.data.tags.map((t) => t.toLowerCase()).join("|")}
+            data-text={`${post.data.title} ${post.data.description}`.toLowerCase()}
+          >
+            <PostCard
+              title={post.data.title}
+              description={post.data.description}
+              date={post.data.date}
+              tags={post.data.tags}
+              href={`/blog/${post.id}`}
+            />
+          </div>
+        ))}
+      </div>
+
+      <p id="empty-msg" class="empty-msg" hidden>
+        No posts match your filter.
+      </p>
+    </>
+  )}
+
+  <Sidebar slot="sidebar" />
+</BaseLayout>
+
+<style>
+  .blog-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .search-input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+  .search-input:focus {
+    border-color: var(--accent);
+  }
+
+  /* Tag dropdown built on <details> */
+  .tag-dropdown {
+    position: relative;
+  }
+  .tag-dropdown summary {
+    list-style: none;
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: border-color 0.15s;
+  }
+  .tag-dropdown summary::-webkit-details-marker { display: none; }
+  .tag-dropdown[open] summary {
+    border-color: var(--accent);
+  }
+  .tag-dropdown summary:hover {
+    border-color: var(--accent);
+  }
+  .filter-count {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 999px;
+    min-width: 18px;
+    text-align: center;
+  }
+  .filter-count[hidden] { display: none; }
+  .caret {
+    color: var(--text-muted);
+    font-size: 0.8em;
+  }
+
+  .tag-options {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 50;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tag-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    transition: background 0.12s;
+  }
+  .tag-option:hover {
+    background: var(--bg-card-hover);
+  }
+  .tag-option input {
+    accent-color: var(--accent);
+  }
+  .tag-option-name {
+    flex: 1;
+  }
+  .tag-option-count {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .tag-clear {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .tag-clear:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  /* Hide dropdown options panel when closed */
+  .tag-dropdown:not([open]) .tag-options {
+    display: none;
+  }
+
+  .result-count {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .post-row.is-hidden {
+    display: none;
+  }
+  .empty-msg {
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 24px;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 640px) {
+    .blog-filters {
+      gap: 10px;
+    }
+    /* Search takes its own full-width row */
+    .search-input {
+      flex: 0 0 100%;
+      min-width: 0;
+      padding: 10px 14px;        /* taller touch target */
+      font-size: 0.95rem;
+    }
+    /* Tags + Clear share the next row */
+    .tag-dropdown summary {
+      padding: 10px 14px;
+    }
+    .tag-clear {
+      padding: 10px 14px;
+    }
+    /* Push results count to the right of that same row */
+    .result-count {
+      margin-left: auto;
+      font-size: 0.78rem;
+    }
+    /* Dropdown panel: never wider than the screen */
+    .tag-options {
+      min-width: 0;
+      width: calc(100vw - 36px);
+      max-width: 320px;
+      max-height: 50vh;
+    }
+    .tag-option {
+      padding: 10px 8px;          /* taller for touch */
+      font-size: 0.92rem;
+    }
+  }
+</style>
+
+<script is:inline>
+  (function () {
+    function init() {
+      const search = document.getElementById("post-search");
+      const dropdown = document.getElementById("tag-filter");
+      const clearBtn = document.getElementById("tag-filter-clear");
+      const checkboxes = dropdown
+        ? dropdown.querySelectorAll('input[type="checkbox"]')
+        : [];
+      const tagCountBadge = document.getElementById("tag-filter-count");
+      const rows = document.querySelectorAll(".post-row");
+      const counter = document.getElementById("result-count");
+      const emptyMsg = document.getElementById("empty-msg");
+      if (!search || !dropdown) return;
+
+      function apply() {
+        const q = search.value.trim().toLowerCase();
+        const selected = Array.from(checkboxes)
+          .filter(function (c) { return c.checked; })
+          .map(function (c) { return c.value.toLowerCase(); });
+
+        let visible = 0;
+        rows.forEach(function (row) {
+          const text = row.dataset.text || "";
+          const tags = (row.dataset.tags || "").split("|").filter(Boolean);
+          const matchesText = !q || text.indexOf(q) !== -1;
+          const matchesTags =
+            selected.length === 0 ||
+            selected.every(function (t) { return tags.indexOf(t) !== -1; });
+          const show = matchesText && matchesTags;
+          row.classList.toggle("is-hidden", !show);
+          if (show) visible++;
+        });
+
+        if (counter) counter.textContent = visible + (visible === 1 ? " post" : " posts");
+        if (emptyMsg) emptyMsg.hidden = visible !== 0;
+
+        if (tagCountBadge) {
+          if (selected.length > 0) {
+            tagCountBadge.textContent = String(selected.length);
+            tagCountBadge.hidden = false;
+          } else {
+            tagCountBadge.hidden = true;
+          }
+        }
+      }
+
+      search.addEventListener("input", apply);
+      checkboxes.forEach(function (c) { c.addEventListener("change", apply); });
+
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          checkboxes.forEach(function (c) { c.checked = false; });
+          apply();
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener("click", function (e) {
+        if (!dropdown.contains(e.target)) dropdown.removeAttribute("open");
+      });
+
+      apply();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
+    }
+  })();
+</script>

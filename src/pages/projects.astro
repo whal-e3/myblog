@@ -1,0 +1,272 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/Sidebar.astro";
+import { getCollection, render } from "astro:content";
+
+// Load projects, sort by featured then order
+const projects = (await getCollection("projects")).sort((a, b) => {
+  if (a.data.featured !== b.data.featured) return a.data.featured ? -1 : 1;
+  return a.data.order - b.data.order;
+});
+
+// Load all posts so we can resolve project.posts → post entries
+const now = new Date();
+const allPosts = (await getCollection("blog"))
+  .filter((p) => !p.data.draft)
+  .filter((p) => !p.data.publishDate || p.data.publishDate <= now);
+const postsById = new Map(allPosts.map((p) => [p.id, p]));
+
+// Pre-render markdown body for each project
+const rendered = await Promise.all(
+  projects.map(async (p) => {
+    const { Content } = await render(p);
+    const linkedPosts = p.data.posts
+      .map((id) => postsById.get(id))
+      .filter((x): x is NonNullable<typeof x> => Boolean(x))
+      .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+    return { project: p, Content, linkedPosts };
+  }),
+);
+
+const statusLabel: Record<string, string> = {
+  active: "Active",
+  shipped: "Shipped",
+  concluded: "Concluded",
+  upcoming: "Upcoming",
+  archived: "Archived",
+};
+
+function formatDate(d: Date) {
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+---
+
+<BaseLayout title="Projects" description="Things I've built." sidebar>
+  <h1 class="section-title section-title--tight">Projects</h1>
+  <p class="page-intro">
+    Tools, platforms, and CTF challenges I've built.
+  </p>
+
+  <div class="project-list">
+    {rendered.map(({ project, Content, linkedPosts }) => (
+      <article class={`project ${project.data.featured ? "is-featured" : ""}`}>
+        {(project.data.cover || project.data.coverVideo) && (
+          <div class="project-cover">
+            {project.data.coverVideo ? (
+              <video
+                src={project.data.coverVideo}
+                width="1600"
+                height="700"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="metadata"
+              />
+            ) : (
+              <img
+                src={project.data.cover}
+                alt={project.data.title}
+                width="1600"
+                height="700"
+                loading="eager"
+              />
+            )}
+          </div>
+        )}
+
+        <div class="project-info">
+          <div class="project-head">
+            <h2 class="project-name">{project.data.title}</h2>
+            <span class={`status status-${project.data.status}`}>
+              {statusLabel[project.data.status]}
+            </span>
+          </div>
+          <p class="project-tagline">{project.data.tagline}</p>
+
+          {project.data.links.length > 0 && (
+            <div class="project-links">
+              {project.data.links.map((l) => (
+                <a href={l.url} target="_blank" rel="noopener">
+                  {l.label} ↗
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div class="project-body prose">
+            <Content />
+          </div>
+
+          {linkedPosts.length > 0 && (
+            <div class="related-posts">
+              <h3 class="related-title">// Related posts</h3>
+              <ul>
+                {linkedPosts.map((post) => (
+                  <li>
+                    <a href={`/blog/${post.id}`} class="related-link">
+                      <span class="related-post-title">{post.data.title}</span>
+                      <span class="related-post-date">{formatDate(post.data.date)}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </article>
+    ))}
+  </div>
+
+  <Sidebar slot="sidebar" />
+</BaseLayout>
+
+<style>
+  .page-intro {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    margin-bottom: 36px;
+  }
+
+  .project-list {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .project {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  }
+  .project.is-featured {
+    border-color: rgba(255, 107, 42, 0.4);
+  }
+
+  .project-cover {
+    aspect-ratio: 16 / 7;
+    background: var(--bg-deep);
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .project-cover img,
+  .project-cover video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .project-info {
+    padding: 24px 28px 28px;
+  }
+
+  .project-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+  .project-name {
+    font-family: var(--font-header);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+  }
+  .status {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 3px 9px;
+    border-radius: 4px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+  .status-active   { color: var(--accent); border-color: rgba(255, 107, 42, 0.4); background: var(--accent-dim); }
+  .status-shipped  { color: var(--accent-blue); border-color: rgba(74, 158, 255, 0.4); background: var(--accent-blue-dim); }
+  .status-concluded { color: var(--text-secondary); border-color: var(--border); background: rgba(255, 255, 255, 0.04); }
+  .status-upcoming { color: var(--status-warn); border-color: var(--status-warn-border); background: var(--status-warn-dim); }
+  .status-archived { color: var(--text-muted); border-color: var(--border); background: rgba(255,255,255,0.03); }
+
+  .project-tagline {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.5;
+    margin-bottom: 14px;
+  }
+
+  .project-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .project-links a {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+  .project-links a:hover {
+    color: var(--accent-blue);
+  }
+
+  .project-body {
+    margin-top: 8px;
+    font-size: 0.95rem;
+  }
+
+  .related-posts {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-subtle);
+  }
+  .related-title {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+  }
+  .related-posts ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .related-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    color: var(--text-primary);
+    transition: color 0.15s;
+  }
+  .related-link:hover {
+    color: var(--accent);
+  }
+  .related-post-title {
+    font-size: 0.92rem;
+  }
+  .related-post-date {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .project-info { padding: 20px 20px 22px; }
+    .project-head { flex-direction: column; gap: 6px; align-items: flex-start; }
+    .project-name { font-size: 1.3rem; }
+    .related-link { flex-direction: column; gap: 2px; align-items: flex-start; }
+  }
+</style>

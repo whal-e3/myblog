@@ -1,0 +1,663 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Sidebar from "../components/Sidebar.astro";
+---
+
+<BaseLayout
+  title="CV"
+  description="Sunhyuk Hwang — Academic CV. Satellite RF security researcher."
+  sidebar
+>
+  <div class="cv-paper">
+    {/* ── Header ── */}
+    <div class="cv-header">
+      <div class="cv-header-text">
+        <h1>SUNHYUK HWANG</h1>
+        <p class="cv-role">M.S. candidate, Cybersecurity — Kyung Hee University</p>
+        <p class="cv-tagline">Satellite Cybersecurity · wireless protocol analysis</p>
+        <div class="cv-actions">
+          <a class="cv-download" href="/cv.pdf" download>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Download CV (PDF)</span>
+          </a>
+          <a class="cv-link" href="https://www.linkedin.com/in/eric-whale/" target="_blank" rel="noopener">
+            LinkedIn ↗
+          </a>
+        </div>
+      </div>
+      <div class="cv-photo-wrap">
+        <img src="/cv-photo.jpg" alt="Sunhyuk Hwang" class="cv-photo" width="360" height="432" />
+      </div>
+    </div>
+
+    {/* ── Education ── */}
+    <div class="cv-section">
+      <h2>// Education</h2>
+
+      <div class="cv-entry">
+        <div class="cv-entry-head">
+          <h3>M.S., Cybersecurity — Kyung Hee University</h3>
+          <span class="cv-date">Mar 2025 – Feb 2027 (expected)</span>
+        </div>
+        <ul>
+          <li>
+            Graduate researcher,
+            <a href="https://pwnlab.kr/" target="_blank" rel="noopener">PWNLAB</a>
+            cybersecurity research lab (2025 – present)
+          </li>
+          <li>Thesis: <em>TBD</em></li>
+          <li>Advisor: Prof. Dae-Hee Jang</li>
+          <li>Research focus: Satellite communication security</li>
+        </ul>
+      </div>
+
+      <div class="cv-entry">
+        <div class="cv-entry-head">
+          <h3>B.S., Computer Engineering — Kyung Hee University</h3>
+          <span class="cv-date">Mar 2019 – Feb 2025</span>
+        </div>
+        <ul>
+          <li>Undergraduate researcher, PWNLAB cybersecurity research lab (2023 – 2024)</li>
+          <li>Research focus: Drone security</li>
+        </ul>
+      </div>
+    </div>
+
+    {/* ── Research Interests ── */}
+    <div class="cv-section">
+      <h2>// Research Interests</h2>
+      <p>
+        Space and satellite security. Currently focused on the RF layer —
+        satellite communication-protocol analysis and exploitation, with
+        hands-on experience operating real satellite antennas. Broader
+        interests include satellite firmware / onboard-software security
+        (cFS, NOS3-simulated systems) and hardware-level attack surfaces,
+        supported by firmware reverse engineering and embedded-hardware
+        experience.
+      </p>
+    </div>
+
+    {/* ── Publications ── */}
+    <div class="cv-section">
+      <h2>// Publications</h2>
+      <ol class="cv-pubs">
+        <li>
+          <strong>
+            "Design and Implementation of a Virtual Satellite Antenna System
+            for Satellite RF Hacking Research."
+          </strong>
+          Conference on Information Security and Cryptography — Summer
+          (CISC-S'26), Busan, Korea. <em>Scheduled for oral presentation May 8, 2026.</em>
+        </li>
+        <li>
+          <strong>"Analysis of Security Threats in Satellite Control Communication Using the NOS3 Satellite System Simulator."</strong>
+          Conference on Information Security and Cryptography (CISC-W'24),
+          Nov 2024. ·
+          <a
+            class="paper-link"
+            href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12160174"
+            target="_blank"
+            rel="noopener"
+          >view paper ↗</a>
+        </li>
+        <li>
+          <strong>"Research on Exploiting Open Source Ground Stations through Satellite Spoofing Signal."</strong>
+          Korea Computer Congress (KCC 2024), Jun 2024. ·
+          <a
+            class="paper-link"
+            href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE11862517"
+            target="_blank"
+            rel="noopener"
+          >view paper ↗</a>
+        </li>
+        <li>
+          <strong>"Analysis of the Communication Protocol in Open-Source Drone (PX4)."</strong>
+          Conference on Information Security and Cryptography — Winter
+          (CISC-W'23), Dec 2023.
+        </li>
+        <li>
+          <strong>"A Practical Tool for Analyzing Security Threats in Satellite Communications."</strong>
+          Co-authored with an undergraduate researcher under my mentorship. ·
+          <a
+            class="paper-link"
+            href="https://scholar.google.com/citations?view_op=view_citation&amp;hl=ko&amp;user=6q1BWbYAAAAJ&amp;citation_for_view=6q1BWbYAAAAJ:UeHWp8X0CEIC"
+            target="_blank"
+            rel="noopener"
+          >view on Google Scholar ↗</a>
+        </li>
+      </ol>
+    </div>
+
+    {/* ── Experience ── */}
+    <div class="cv-section">
+      <h2>// Experience</h2>
+
+      <div class="cv-project">
+        <div class="cv-entry-head">
+          <h3>Graduate Researcher — Satellite Cybersecurity</h3>
+          <span class="cv-date">Mar 2025 – present</span>
+        </div>
+        <p class="cv-org">Kyung Hee University Cybersecurity Lab · Prof. Dae-Hee Jang</p>
+        <ul>
+          <li>
+            Designing <em>VSA</em> (<a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>),
+            a virtualized satellite ground-station / antenna system for
+            satellite RF security research.
+          </li>
+          <li>
+            Building
+            <a href="https://mrradio.kr/" target="_blank" rel="noopener">Mr.Radio</a>,
+            a RF-hacking wargame platform for satellite RF security education.
+          </li>
+          <li>
+            Designed and delivered internal RF-security training at PWNLAB,
+            introducing RF attack surfaces and hands-on exploitation techniques
+            (Mar 2024 – present).
+          </li>
+        </ul>
+      </div>
+
+      <div class="cv-project">
+        <div class="cv-entry-head">
+          <h3>Researcher — Satellite Cybersecurity R&amp;D Project</h3>
+          <span class="cv-date">2024 – 2025</span>
+        </div>
+        <p class="cv-org">Korean government research institute</p>
+        <ul>
+          <li>Government-funded defense cybersecurity R&amp;D project.</li>
+          <li>
+            Delivered invited talk — RF security research overview — at a
+            Korean government research institute in Daejeon (Feb 2024).
+          </li>
+          <li>Technical details and deliverables restricted under NDA.</li>
+        </ul>
+      </div>
+
+      <div class="cv-project">
+        <div class="cv-entry-head">
+          <h3>Contributing Researcher — Drone Security</h3>
+          <span class="cv-date">Apr 2023 – Dec 2023</span>
+        </div>
+        <p class="cv-org">Korean government research institutes (inter-agency collaboration)</p>
+        <ul>
+          <li>Government-funded drone security research.</li>
+          <li>Technical details and deliverables restricted under NDA.</li>
+        </ul>
+      </div>
+    </div>
+
+    {/* ── Projects ── */}
+    <div class="cv-section">
+      <h2>// Projects</h2>
+
+      <div class="cv-project">
+        <h4>
+          VSA / <a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>
+          — Virtual Satellite Antenna
+        </h4>
+        <p>
+          Desktop application that virtualizes satellite ground-station antenna
+          systems. GPredict integration for real-time tracking, IQ signal-file
+          analysis, and multi-antenna beam-pattern simulation. Underlies the
+          M.S. thesis and CISC-S'26 paper.
+        </p>
+      </div>
+
+      <div class="cv-project">
+        <h4>
+          Mr.Radio — <a href="https://mrradio.kr" target="_blank" rel="noopener">mrradio.kr</a>
+        </h4>
+        <p>
+          Browser-based RF-hacking wargame platform with virtualized satellite
+          signal environments — signal reception, demodulation, and decoding
+          without physical SDR hardware. Built for RF security education and CTF
+          use.
+        </p>
+      </div>
+
+      <div class="cv-project">
+        <h4>
+          <a href="http://hackthedrone.org/" target="_blank" rel="noopener">Hack-the-Drone CTF</a>
+          — RF Challenges &amp; Operations (2023, 2024)
+        </h4>
+        <p>
+          Sole designer and author of all RF-domain challenges for the
+          Hack-the-Drone CTF competition. Also served in event operations both years.
+        </p>
+      </div>
+    </div>
+
+    {/* ── Honors & Awards ── */}
+    <div class="cv-section">
+      <h2>// Honors &amp; Awards</h2>
+      <ul>
+        <li><strong>AUTOCRYPT Special Award</strong> — Automotive Hacking Competition (AutoHack).</li>
+        <li><strong>Hacktaeon CTF Finalist</strong> — National CTF hosted by Sejong City.</li>
+      </ul>
+    </div>
+
+
+    {/* ── Conferences Attended ── */}
+    <div class="cv-section">
+      <h2>// Conferences Attended</h2>
+      <ul>
+        <li>
+          <strong>NetSec-KR 2025</strong> — Korea Network Security Conference, Seoul, Korea.
+          <span class="cv-meta">Apr 2025</span>
+        </li>
+        <li>
+          <strong>Black Hat USA 2024</strong> — Las Vegas, NV, USA.
+          <span class="cv-meta">Aug 2024</span>
+        </li>
+        <li>
+          <strong>ACM WiSec 2024</strong> — ACM Conference on Security and
+          Privacy in Wireless and Mobile Networks, Seoul, Korea.
+          <span class="cv-meta">May 2024</span>
+        </li>
+      </ul>
+    </div>
+
+
+    {/* ── Technical Skills ── */}
+    <div class="cv-section">
+      <h2>// Technical Skills</h2>
+      <dl class="skills-list">
+        <div class="skill-row">
+          <dt>Software-defined radio</dt>
+          <dd>
+            Hands-on satellite RF work across the full stack — from
+            installing and aiming antennas to receive live satellite signals,
+            through SDR hardware (e.g. HackRF One, USRP), to analysis software
+            (e.g. GNU Radio, Inspectrum) for demodulation and decoding.
+          </dd>
+        </div>
+        <div class="skill-row">
+          <dt>Satellite systems</dt>
+          <dd>
+            Working knowledge of satellite communication protocols, the NOS3
+            satellite simulator, NASA's core Flight System (cFS) flight
+            software framework, the TinyGS ground-station stack, and the
+            CCSDS standard protocol.
+          </dd>
+        </div>
+        <div class="skill-row">
+          <dt>System hacking &amp; Embedded</dt>
+          <dd>
+            Proficient in reverse engineering and binary exploitation
+            using tools like IDA Pro and Ghidra. Also experienced in
+            hardware-level embedded hacking.
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+  </div><!-- /.cv-paper -->
+
+  <Sidebar slot="sidebar" />
+</BaseLayout>
+
+<style is:global>
+  /* Widen the main content column on the CV page so the paper can breathe */
+  .main-content:has(.cv-paper) {
+    max-width: 1080px;
+  }
+</style>
+
+<style>
+  .cv-paper {
+    background: rgba(10, 5, 16, 0.62);
+    border: 1px solid rgba(245, 230, 212, 0.12);
+    border-radius: 16px;
+    padding: 48px 60px 44px;
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.5),
+      inset 0 0 60px rgba(245, 230, 212, 0.02);
+  }
+
+  /* ── Core CV section typography ── */
+  .cv-section {
+    margin-bottom: 44px;
+  }
+  .cv-section h2 {
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 20px;
+  }
+  .cv-section h3 {
+    font-family: var(--font-header);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .cv-section h4 {
+    font-family: var(--font-header);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+  }
+  .cv-section p,
+  .cv-section li {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.7;
+  }
+  .cv-section ul {
+    padding-left: 20px;
+    margin: 8px 0 0;
+  }
+  .cv-section li {
+    margin: 6px 0;
+  }
+  .cv-date {
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+  /* Project / research cards (reused for Research Experience + Selected Projects) */
+  .cv-project {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  }
+  .cv-project:last-child {
+    margin-bottom: 0;
+  }
+  .cv-project p {
+    margin: 4px 0;
+  }
+
+  /* ── Header: text left, photo right ── */
+  .cv-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    margin-bottom: 44px;
+  }
+  .cv-header-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .cv-header h1 {
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .cv-role {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    letter-spacing: 0.02em;
+  }
+  .cv-tagline {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    line-height: 1.7;
+    margin-top: 8px;
+  }
+
+  /* Header actions (download + LinkedIn) */
+  .cv-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cv-paper .cv-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid rgba(255, 107, 42, 0.45);
+    border-radius: 8px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .cv-paper .cv-download:hover {
+    background: rgba(255, 107, 42, 0.22);
+    color: var(--accent-strong);
+    text-decoration: none;
+    border-color: var(--accent);
+  }
+  .cv-paper .cv-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .cv-paper .cv-link:hover {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    text-decoration: none;
+  }
+
+  /* Photo */
+  .cv-photo-wrap {
+    flex-shrink: 0;
+  }
+  .cv-photo {
+    width: 140px;
+    height: 168px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 230, 212, 0.18);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+    display: block;
+  }
+
+  /* Last section has no bottom margin */
+  .cv-paper .cv-section:last-child { margin-bottom: 0; }
+
+  /* Section note (small italic under section header) */
+  .cv-section-note {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+
+  /* CV entry layout — h3 + dates on one row */
+  .cv-entry { margin-bottom: 22px; }
+  .cv-entry:last-child { margin-bottom: 0; }
+  .cv-entry-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .cv-entry-head h3 { margin-bottom: 0; }
+  .cv-entry-head .cv-date {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+  .cv-entry ul { margin-top: 8px; }
+
+  /* Research / Selected Projects */
+  .cv-project .cv-entry-head h3 {
+    font-size: 1.05rem;
+    color: var(--text-primary);
+  }
+  .cv-org {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent-blue);
+    margin-top: 2px;
+    margin-bottom: 8px;
+  }
+
+  /* Coursework grid */
+  .coursework-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+  }
+  .coursework-grid h4 {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-blue);
+    margin-bottom: 8px;
+  }
+  .coursework-list {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+  .coursework-list li {
+    padding-left: 14px;
+    position: relative;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .coursework-list li::before {
+    content: "·";
+    color: var(--accent);
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+  }
+
+  /* Publications list */
+  .cv-pubs {
+    padding-left: 24px;
+    margin: 8px 0;
+  }
+  .cv-pubs li {
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+  .cv-pubs li::marker {
+    color: var(--accent);
+    font-family: var(--font-mono);
+  }
+  .cv-pub-en {
+    display: block;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    font-style: italic;
+    margin-top: 2px;
+  }
+
+  /* Talks list — slightly tighter */
+  .cv-talks li { margin-bottom: 6px; }
+
+  /* Inline meta info (dates in presentation/teaching lists) */
+  .cv-meta {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-left: 4px;
+  }
+
+  /* Inline links inside the CV — distinct color from titles */
+  .cv-paper a {
+    color: var(--accent-blue);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: rgba(74, 158, 255, 0.4);
+    transition: color 0.15s, text-decoration-color 0.15s;
+  }
+  .cv-paper a:hover {
+    color: var(--accent);
+    text-decoration-color: var(--accent);
+  }
+  .cv-paper .cv-download,
+  .cv-paper .cv-link {
+    text-decoration: none;
+  }
+  /* Bold/title text stays in primary color, never link-colored */
+  .cv-paper strong {
+    color: var(--text-primary);
+  }
+
+  /* Skills list — flat definition-list style (row-per-group) */
+  .skills-list {
+    margin: 0;
+  }
+  .skill-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .skill-row:last-child {
+    border-bottom: none;
+  }
+  .skill-row dt {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent-blue);
+    padding-top: 2px;
+  }
+  .skill-row dd {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .cv-paper {
+      padding: 28px 22px 24px;
+      border-radius: 12px;
+    }
+    .cv-header {
+      flex-direction: column-reverse;  /* photo on top for mobile */
+      align-items: flex-start;
+      gap: 18px;
+    }
+    .cv-photo {
+      width: 110px;
+      height: 132px;
+    }
+    .cv-section { margin-bottom: 34px; }
+    .cv-section h2 { font-size: 0.9rem; }
+    .cv-project { padding: 18px; }
+    .skill-row {
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+    .cv-entry-head {
+      flex-direction: column;
+      gap: 2px;
+    }
+  }
+</style>

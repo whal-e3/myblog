@@ -1,0 +1,238 @@
+---
+import { getCollection } from "astro:content";
+import { news } from "../data/news";
+
+const now = new Date();
+const allPosts = (await getCollection("blog"))
+  .filter((p) => !p.data.draft)
+  .filter((p) => !p.data.publishDate || p.data.publishDate <= now);
+
+// Recent posts (top 3 by date)
+const recent = [...allPosts]
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+
+// Recent news (top 5 by date)
+const recentNews = [...news]
+  .sort((a, b) => new Date(b.date).valueOf() - new Date(a.date).valueOf())
+  .slice(0, 5);
+
+function formatShort(d: Date) {
+  return d.toLocaleDateString("en-US", { year: "2-digit", month: "short", day: "numeric" });
+}
+---
+
+<aside class="sidebar">
+  {/* About */}
+  <section class="widget">
+    <h3 class="widget-title">// About</h3>
+    <div class="about-card">
+      <p class="about-name">SunHyuk Hwang</p>
+      <p class="about-role">Satellite RF security researcher.</p>
+      <p class="about-tag">Hacking · Space · AI</p>
+      <a href="/cv" class="about-link">Read CV →</a>
+    </div>
+  </section>
+
+  {/* Recent News */}
+  <section class="widget">
+    <h3 class="widget-title">// Recent News</h3>
+    {recentNews.length === 0 ? (
+      <p class="widget-empty">No news yet.</p>
+    ) : (
+      <ul class="news-list">
+        {recentNews.map((n) => (
+          <li class="news-item">
+            <span class="news-date">{formatShort(new Date(n.date))}</span>
+            {n.link ? (
+              <a href={n.link} class="news-text" target="_blank" rel="noopener">{n.text}</a>
+            ) : (
+              <span class="news-text">{n.text}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  {/* Recent posts */}
+  <section class="widget">
+    <h3 class="widget-title">// Recent Posts</h3>
+    {recent.length === 0 ? (
+      <p class="widget-empty">No posts yet.</p>
+    ) : (
+      <ul class="recent-list">
+        {recent.map((post) => (
+          <li>
+            <a href={`/blog/${post.id}`} class="recent-link">
+              <span class="recent-title">{post.data.title}</span>
+              <span class="recent-date">{formatShort(post.data.date)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+
+  {/* Connect */}
+  <section class="widget">
+    <h3 class="widget-title">// Connect</h3>
+    <ul class="connect-list">
+      <li><a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a></li>
+      <li><a href="https://www.linkedin.com/in/eric-whale/" target="_blank" rel="noopener">LinkedIn</a></li>
+      <li><a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a></li>
+      <li><a href="mailto:hwang@sunhyuk.dev">Email</a></li>
+    </ul>
+  </section>
+</aside>
+
+<style>
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+  }
+
+  /* When sidebar is pinned to the left viewport edge (desktop),
+     flatten the left side so it looks "attached" */
+  @media (min-width: 1024px) {
+    .sidebar {
+      border-radius: 0 12px 12px 0;
+      border-left: none;
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.45);
+    }
+  }
+
+  .widget {
+    padding: 20px 22px;
+  }
+  .widget + .widget {
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .widget-title {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 14px;
+  }
+
+  .widget-empty {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+  }
+
+  /* About */
+  .about-name {
+    font-family: var(--font-header);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+  .about-role {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .about-tag {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    margin-bottom: 14px;
+  }
+  .about-link {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* News */
+  .news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .news-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .news-date {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--accent-blue);
+    letter-spacing: 0.04em;
+  }
+  .news-text {
+    font-size: 0.85rem;
+    line-height: 1.45;
+    color: var(--text-primary);
+  }
+  a.news-text {
+    transition: color 0.15s;
+  }
+  a.news-text:hover {
+    color: var(--accent);
+  }
+
+  /* Recent posts */
+  .recent-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .recent-link {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: var(--text-primary);
+    transition: color 0.15s;
+  }
+  .recent-link:hover {
+    color: var(--accent);
+  }
+  .recent-title {
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .recent-date {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  /* Connect — 2 links per row */
+  .connect-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+  }
+  .connect-list a {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent-blue);
+  }
+  .connect-list a:hover {
+    color: var(--accent);
+  }
+</style>

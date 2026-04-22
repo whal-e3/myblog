@@ -1,0 +1,186 @@
+---
+// Fullscreen nebula background with scroll parallax + sprinkled blinking stars
+// Stars are colored white/red-orange/blue to match the nebula palette
+
+type Star = {
+  x: number; y: number; size: number; color: string;
+  blink: boolean; dur: number; delay: number;
+};
+
+function rand(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}
+
+type Layer = "near" | "mid" | "far";
+
+function makeStars(seed: number, count: number, layer: Layer): Star[] {
+  const rng = rand(seed);
+  const out: Star[] = [];
+  // Per-layer size & opacity profile (max diameter capped at 3)
+  const profile = {
+    near: { sizeMin: 2.0, sizeMax: 3.0, opacity: 1.0,  blinkP: 0 },
+    mid:  { sizeMin: 1.3, sizeMax: 2.0, opacity: 0.78, blinkP: 0 },
+    far:  { sizeMin: 0.7, sizeMax: 1.3, opacity: 0.55, blinkP: 0 },
+  }[layer];
+
+  for (let i = 0; i < count; i++) {
+    const r = rng();
+    let color: string;
+    if (r < 0.65) {
+      // 65% red-ish — varied warm shades to feel natural
+      const sub = rng();
+      if (sub < 0.40) color = "#ff5e44";      // deep red
+      else if (sub < 0.70) color = "#ff7e54"; // orange-red
+      else if (sub < 0.88) color = "#ff5a78"; // pink-red
+      else color = "#ffa070";                  // warm orange
+    } else if (r < 0.95) {
+      // 30% yellow → white
+      const sub = rng();
+      if (sub < 0.45) color = "#ffe8a8";      // pale yellow
+      else if (sub < 0.80) color = "#fff5d8"; // yellow-white
+      else color = "#ffffff";                  // pure white
+    } else {
+      // 5% blue-ish
+      color = "#a8c8ff";
+    }
+
+    out.push({
+      x: rng() * 100,
+      y: rng() * 100,
+      size: profile.sizeMin + rng() * (profile.sizeMax - profile.sizeMin),
+      color,
+      blink: rng() < profile.blinkP,
+      dur: 6 + rng() * 8,
+      delay: rng() * 12,
+    });
+  }
+  return out;
+}
+
+// Three parallax layers — bright/large = "near" (fast), dim/small = "far" (slow)
+const layers = [
+  { name: "far",  stars: makeStars(11111, 90, "far"),  duration: 720, opacity: 0.55 },
+  { name: "mid",  stars: makeStars(22222, 55, "mid"),  duration: 380, opacity: 0.78 },
+  { name: "near", stars: makeStars(33333, 28, "near"), duration: 200, opacity: 1.0  },
+];
+---
+
+<div class="space-bg" aria-hidden="true">
+  <img class="space-img" src="/assets/space-bg.webp" alt="" />
+</div>
+<div class="space-overlay" aria-hidden="true"></div>
+<div class="star-viewport" aria-hidden="true">
+  {layers.map((layer) => (
+    <div
+      class={`star-layer layer-${layer.name}`}
+      style={`animation-duration: ${layer.duration}s; opacity: ${layer.opacity};`}
+    >
+      {[0, 1].map(() => (
+        <svg
+          class="star-tile"
+          viewBox="0 0 1600 900"
+          preserveAspectRatio="xMidYMid slice"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {layer.stars.map((s) => (
+            <circle
+              cx={s.x * 16}
+              cy={s.y * 9}
+              r={s.size / 2}
+              fill={s.color}
+            />
+          ))}
+        </svg>
+      ))}
+    </div>
+  ))}
+</div>
+
+<style>
+  .space-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Background image stays still */
+  .space-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .space-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 85% 75% at center,
+        rgba(5, 3, 8, 0.55) 0%,
+        rgba(5, 3, 8, 0.40) 60%,
+        rgba(5, 3, 8, 0.25) 100%);
+  }
+
+  /* Container: full viewport, hides the overflowing tile to the right */
+  .star-viewport {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  /* Each parallax layer = one composited element doing its own translate */
+  .star-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 200vw;
+    height: 100%;
+    will-change: transform;
+    transform: translate3d(0, 0, 0);
+    animation-name: stars-drift;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    contain: layout paint;
+  }
+  .star-tile {
+    width: 100vw;
+    height: 100%;
+    flex-shrink: 0;
+    display: block;
+  }
+
+  @keyframes stars-drift {
+    from { transform: translate3d(0, 0, 0); }
+    to   { transform: translate3d(-100vw, 0, 0); }
+  }
+
+  /* Stars are now rendered as SVG <circle> inside each tile — no per-star CSS needed */
+
+  .star.blink {
+    animation-name: star-twinkle;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-in-out;
+  }
+
+  @keyframes star-twinkle {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.08; }
+  }
+
+  /* Animations are always on — user requested visible parallax + twinkle */
+</style>
+

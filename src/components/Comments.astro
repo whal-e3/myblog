@@ -1,0 +1,31 @@
+---
+// Giscus comments — fill these in at https://giscus.app and the comments will
+// activate automatically. Until then this component renders nothing.
+const REPO        = "whal-e3/myblog";
+const REPO_ID     = "";   // get from giscus.app
+const CATEGORY    = "Announcements";
+const CATEGORY_ID = "";   // get from giscus.app
+
+const enabled = REPO_ID && CATEGORY_ID;
+---
+
+{enabled && (
+  <div class="comments-section">
+    <script
+      src="https://giscus.app/client.js"
+      data-repo={REPO}
+      data-repo-id={REPO_ID}
+      data-category={CATEGORY}
+      data-category-id={CATEGORY_ID}
+      data-mapping="pathname"
+      data-strict="0"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      data-input-position="top"
+      data-theme="dark_dimmed"
+      data-lang="en"
+      crossorigin="anonymous"
+      async
+    ></script>
+  </div>
+)}

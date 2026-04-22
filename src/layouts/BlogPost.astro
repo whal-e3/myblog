@@ -1,0 +1,46 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Comments from "../components/Comments.astro";
+
+interface Props {
+  title: string;
+  description: string;
+  date: Date;
+  tags: string[];
+  comments?: boolean;
+  sidebar?: boolean;
+}
+
+const { title, description, date, tags, comments = true, sidebar = false } = Astro.props;
+
+function formatDate(d: Date) {
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+---
+
+<BaseLayout title={title} description={description} sidebar={sidebar}>
+  <article>
+    <div class="post-header">
+      <h1 class="post-title">{title}</h1>
+      <div class="post-meta">
+        <time datetime={date.toISOString()}>{formatDate(date)}</time>
+        {tags.length > 0 && (
+          <div class="post-tags">
+            {tags.map((tag) => (
+              <a href={`/tags/${tag}`} class="tag">{tag}</a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+    <div class="prose">
+      <slot />
+    </div>
+    {comments && <Comments />}
+  </article>
+  <slot name="sidebar" slot="sidebar" />
+</BaseLayout>

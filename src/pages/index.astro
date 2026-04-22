@@ -1,0 +1,271 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PostCard from "../components/PostCard.astro";
+import Sidebar from "../components/Sidebar.astro";
+import { getCollection } from "astro:content";
+
+const now = new Date();
+const allPosts = (await getCollection("blog"))
+  .filter((p) => !p.data.draft)
+  .filter((p) => !p.data.publishDate || p.data.publishDate <= now);
+
+const starred = allPosts
+  .filter((p) => p.data.starred)
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+const recent = [...allPosts]
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
+---
+
+<BaseLayout title="sunhyuk.dev" sidebar>
+  <section class="hero">
+    <h1 class="hero-title">SunHyuk Hwang</h1>
+    <p class="hero-subtitle">
+      Satellite RF security researcher.<br />
+      Hacking, space, and AI.
+    </p>
+    <div class="hero-links">
+      <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a>
+      <a href="mailto:hwang@sunhyuk.dev">Email</a>
+    </div>
+  </section>
+
+  {/* ── Currently ── */}
+  <section class="home-section">
+    <h2 class="section-title">// Currently</h2>
+    <div class="currently-card">
+      <div class="currently-row">
+        <span class="currently-tag">Researching</span>
+        <span class="currently-text">
+          Independent security analysis of Iridium satellite protocols
+        </span>
+      </div>
+      <div class="currently-row">
+        <span class="currently-tag">Building</span>
+        <span class="currently-text">
+          OpenVSA — virtual satellite ground station for RF security research
+        </span>
+      </div>
+    </div>
+  </section>
+
+  {/* ── Featured Projects ── */}
+  <section class="home-section">
+    <h2 class="section-title">// Featured Projects</h2>
+    <div class="project-grid">
+      <a href="/blog/mrradio" class="project-card">
+        <div class="project-thumb">
+          <img
+            src="/assets/content/project/mr_radio/mrradio_wargames.png"
+            alt="Mr.Radio wargame interface"
+            width="1600"
+            height="900"
+            loading="eager"
+          />
+        </div>
+        <div class="project-body">
+          <h3 class="project-title">Mr.Radio</h3>
+          <p class="project-tag">
+            World's first virtual RF hacking wargame — receive, demodulate, decode
+            satellite signals in the browser.
+          </p>
+          <span class="project-badge badge-blue">mrradio.kr</span>
+        </div>
+      </a>
+
+      <a href="https://github.com/whal-e3" target="_blank" rel="noopener" class="project-card">
+        <div class="project-thumb">
+          <video
+            src="/assets/content/project/mr_radio/vsa.mp4"
+            width="1600"
+            height="900"
+            autoplay
+            muted
+            loop
+            playsinline
+            preload="metadata"
+          ></video>
+        </div>
+        <div class="project-body">
+          <h3 class="project-title">OpenVSA</h3>
+          <p class="project-tag">
+            Virtual satellite ground station — GPredict integration, 3D antenna
+            visualization, IQ signal analysis. First of its kind.
+          </p>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  {/* ── Starred posts ── */}
+  {starred.length > 0 && (
+    <section class="home-section">
+      <h2 class="section-title">
+        <span style="color: var(--accent);">★</span> Starred
+      </h2>
+      <div class="post-list">
+        {starred.map((post) => (
+          <PostCard
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            tags={post.data.tags}
+            href={`/blog/${post.id}`}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+
+  {/* ── Recent posts ── */}
+  {recent.length > 0 && (
+    <section class="home-section">
+      <h2 class="section-title">Recent posts</h2>
+      <div class="post-list">
+        {recent.map((post) => (
+          <PostCard
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            tags={post.data.tags}
+            href={`/blog/${post.id}`}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+
+  <Sidebar slot="sidebar" />
+</BaseLayout>
+
+<style>
+  .home-section {
+    margin-bottom: 48px;
+  }
+
+  /* ── Currently card ── */
+  .currently-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  }
+  .currently-row {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .currently-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .currently-row:first-child {
+    padding-top: 0;
+  }
+  .currently-tag {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 90px;
+  }
+  .currently-text {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  /* ── Featured Project cards ── */
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  .project-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.25s ease;
+    color: inherit;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  }
+  .project-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(255, 107, 42, 0.22);
+    color: inherit;
+  }
+  .project-thumb {
+    aspect-ratio: 16 / 9;
+    background: var(--bg-deep);
+    overflow: hidden;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .project-thumb img,
+  .project-thumb video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+  .project-card:hover .project-thumb img,
+  .project-card:hover .project-thumb video {
+    transform: scale(1.04);
+  }
+  .project-body {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .project-title {
+    font-family: var(--font-header);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+  .project-tag {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .project-badge {
+    display: inline-block;
+    align-self: flex-start;
+    background: var(--accent-dim);
+    color: var(--accent-strong);
+    border: 1px solid rgba(255, 107, 42, 0.3);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 2px 9px;
+    border-radius: 4px;
+    margin-top: 4px;
+  }
+  .project-badge.badge-blue {
+    background: var(--accent-blue-dim);
+    color: var(--accent-blue);
+    border-color: rgba(74, 158, 255, 0.3);
+  }
+
+  @media (max-width: 700px) {
+    .project-grid { grid-template-columns: 1fr; }
+    .currently-row { flex-direction: column; gap: 4px; padding: 12px 0; }
+    .currently-tag { width: auto; }
+  }
+</style>

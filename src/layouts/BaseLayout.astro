@@ -1,0 +1,162 @@
+---
+import Galaxies from "../components/Galaxies.astro";
+import { ClientRouter } from "astro:transitions";
+
+interface Props {
+  title: string;
+  description?: string;
+  sidebar?: boolean;
+}
+
+const { title, description = "Hacking, Space, and AI.", sidebar = false } = Astro.props;
+const siteTitle = "sunhyuk.dev";
+
+// Active-nav helper: marks the matching nav link as the current page
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const isCurrent = (href: string) =>
+  href === "/" ? path === "/" : path === href || path.startsWith(href + "/");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <title>{title === siteTitle ? title : `${title} — ${siteTitle}`}</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    {/* Preload cursor images so the cursor doesn't flash to system default
+        between page navigation and CSS-load. */}
+    <link rel="preload" href="/cursor-astronaut.png" as="image" />
+    <link rel="preload" href="/cursor-astronaut-hover.png" as="image" />
+    {/* SPA-style navigation — keeps cursor + CSS state across page changes */}
+    <ClientRouter />
+  </head>
+  <body>
+    <Galaxies />
+    <div class="page-wrapper">
+      <header>
+        <div class="container header-row">
+          <a href="/" class="site-title">{siteTitle}</a>
+          <nav>
+            <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
+            <a href="/projects" class:list={[{ "is-current": isCurrent("/projects") }]} aria-current={isCurrent("/projects") ? "page" : undefined}>Projects</a>
+            <a href="/cv"       class:list={[{ "is-current": isCurrent("/cv") }]}       aria-current={isCurrent("/cv")       ? "page" : undefined}>CV</a>
+          </nav>
+          {sidebar && (
+            <button
+              class="menu-toggle"
+              type="button"
+              aria-label="Open sidebar"
+              aria-controls="sidebar-drawer"
+              aria-expanded="false"
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="4" y1="7" x2="20" y2="7" />
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="17" x2="20" y2="17" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </header>
+      <main>
+        <div class={`container ${sidebar ? "with-sidebar" : ""}`}>
+          <div class="main-content">
+            <slot />
+          </div>
+          {sidebar && (
+            <>
+              <div class="sidebar-col" id="sidebar-drawer">
+                <button
+                  class="drawer-close"
+                  type="button"
+                  aria-label="Close sidebar"
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                  </svg>
+                </button>
+                <slot name="sidebar" />
+              </div>
+              <div class="sidebar-backdrop" aria-hidden="true"></div>
+            </>
+          )}
+        </div>
+      </main>
+      <footer>
+        <div class="container">
+          <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
+          &nbsp;·&nbsp;
+          <a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a>
+          &nbsp;·&nbsp;
+          <a href="mailto:hwang@sunhyuk.dev">Email</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  @import "../styles/global.css";
+</style>
+
+<script>
+  // ── Document-level listeners — register ONCE across the SPA lifetime ──
+  function closeDrawer() {
+    document.body.classList.remove("sidebar-open");
+    document.querySelector(".menu-toggle")?.setAttribute("aria-expanded", "false");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
+      closeDrawer();
+    }
+  });
+
+  // Click ripple — blue glow at click location
+  const CLICK_TARGETS = 'a, button, [role="button"], summary, label, .post-card, .project-card';
+  document.addEventListener("mousedown", (e) => {
+    const me = e as MouseEvent;
+    if (!(me.target as Element).closest?.(CLICK_TARGETS)) return;
+    const ripple = document.createElement("span");
+    ripple.className = "click-ripple";
+    ripple.style.left = me.clientX + "px";
+    ripple.style.top = me.clientY + "px";
+    document.body.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+  });
+
+  // ── Element-specific listeners — re-register on every SPA page-load ──
+  function wirePageElements() {
+    const toggle   = document.querySelector<HTMLButtonElement>(".menu-toggle");
+    const closeBtn = document.querySelector<HTMLButtonElement>(".drawer-close");
+    const backdrop = document.querySelector<HTMLDivElement>(".sidebar-backdrop");
+
+    function openDrawer() {
+      document.body.classList.add("sidebar-open");
+      toggle?.setAttribute("aria-expanded", "true");
+    }
+    function toggleDrawer() {
+      if (document.body.classList.contains("sidebar-open")) closeDrawer();
+      else openDrawer();
+    }
+
+    toggle?.addEventListener("click", toggleDrawer);
+    closeBtn?.addEventListener("click", closeDrawer);
+    backdrop?.addEventListener("click", closeDrawer);
+
+    // Auto-close drawer when any link inside it is clicked
+    document.querySelectorAll<HTMLAnchorElement>(".sidebar-col a").forEach((link) => {
+      link.addEventListener("click", closeDrawer);
+    });
+  }
+
+  // Run on initial load + every SPA transition
+  wirePageElements();
+  document.addEventListener("astro:page-load", wirePageElements);
+</script>
