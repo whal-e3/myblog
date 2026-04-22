@@ -14,18 +14,24 @@ import Sidebar from "../components/Sidebar.astro";
       <div class="cv-header-text">
         <h1>SUNHYUK HWANG</h1>
         <p class="cv-role">M.S. candidate, Cybersecurity — Kyung Hee University</p>
+        <p class="cv-advisor">Advisor: Prof. Dae-Hee Jang (PWNLAB)</p>
         <p class="cv-tagline">Satellite Cybersecurity · wireless protocol analysis</p>
         <div class="cv-actions">
-          <a class="cv-download" href="/cv.pdf" download>
+          <button
+            type="button"
+            class="cv-download"
+            data-cv-download
+            aria-label="Download CV (PDF)"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
             <span>Download CV (PDF)</span>
-          </a>
-          <a class="cv-link" href="https://www.linkedin.com/in/eric-whale/" target="_blank" rel="noopener">
-            LinkedIn ↗
+          </button>
+          <a class="cv-link" href="mailto:hwang@sunhyuk.dev">
+            Email ↗
           </a>
         </div>
       </div>
@@ -50,7 +56,6 @@ import Sidebar from "../components/Sidebar.astro";
             cybersecurity research lab (2025 – present)
           </li>
           <li>Thesis: <em>TBD</em></li>
-          <li>Advisor: Prof. Dae-Hee Jang</li>
           <li>Research focus: Satellite communication security</li>
         </ul>
       </div>
@@ -141,7 +146,7 @@ import Sidebar from "../components/Sidebar.astro";
           <h3>Graduate Researcher — Satellite Cybersecurity</h3>
           <span class="cv-date">Mar 2025 – present</span>
         </div>
-        <p class="cv-org">Kyung Hee University Cybersecurity Lab · Prof. Dae-Hee Jang</p>
+        <p class="cv-org">IERAE · Korean government research institute</p>
         <ul>
           <li>
             Designing <em>VSA</em> (<a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>),
@@ -153,10 +158,19 @@ import Sidebar from "../components/Sidebar.astro";
             <a href="https://mrradio.kr/" target="_blank" rel="noopener">Mr.Radio</a>,
             a RF-hacking wargame platform for satellite RF security education.
           </li>
+        </ul>
+      </div>
+
+      <div class="cv-project">
+        <div class="cv-entry-head">
+          <h3>RF Security Instructor — PWNLAB</h3>
+          <span class="cv-date">Mar 2024 – present</span>
+        </div>
+        <p class="cv-org">PWNLAB, Kyung Hee University</p>
+        <ul>
           <li>
-            Designed and delivered internal RF-security training at PWNLAB,
-            introducing RF attack surfaces and hands-on exploitation techniques
-            (Mar 2024 – present).
+            Designed and deliver internal RF-security training for lab members,
+            introducing RF attack surfaces and hands-on exploitation techniques.
           </li>
         </ul>
       </div>
@@ -166,9 +180,9 @@ import Sidebar from "../components/Sidebar.astro";
           <h3>Researcher — Satellite Cybersecurity R&amp;D Project</h3>
           <span class="cv-date">2024 – 2025</span>
         </div>
-        <p class="cv-org">Korean government research institute</p>
+        <p class="cv-org">Korean government research institutes</p>
         <ul>
-          <li>Government-funded defense cybersecurity R&amp;D project.</li>
+          <li>Government-funded defense satellite security research.</li>
           <li>
             Delivered invited talk — RF security research overview — at a
             Korean government research institute in Daejeon (Feb 2024).
@@ -182,7 +196,7 @@ import Sidebar from "../components/Sidebar.astro";
           <h3>Contributing Researcher — Drone Security</h3>
           <span class="cv-date">Apr 2023 – Dec 2023</span>
         </div>
-        <p class="cv-org">Korean government research institutes (inter-agency collaboration)</p>
+        <p class="cv-org">Korean government research institutes</p>
         <ul>
           <li>Government-funded drone security research.</li>
           <li>Technical details and deliverables restricted under NDA.</li>
@@ -202,8 +216,7 @@ import Sidebar from "../components/Sidebar.astro";
         <p>
           Desktop application that virtualizes satellite ground-station antenna
           systems. GPredict integration for real-time tracking, IQ signal-file
-          analysis, and multi-antenna beam-pattern simulation. Underlies the
-          M.S. thesis and CISC-S'26 paper.
+          analysis, and multi-antenna beam-pattern simulation.
         </p>
       </div>
 
@@ -214,8 +227,7 @@ import Sidebar from "../components/Sidebar.astro";
         <p>
           Browser-based RF-hacking wargame platform with virtualized satellite
           signal environments — signal reception, demodulation, and decoding
-          without physical SDR hardware. Built for RF security education and CTF
-          use.
+          without physical SDR hardware. Built for Satellite RF security education.
         </p>
       </div>
 
@@ -288,8 +300,8 @@ import Sidebar from "../components/Sidebar.astro";
           <dt>System hacking &amp; Embedded</dt>
           <dd>
             Proficient in reverse engineering and binary exploitation
-            using tools like IDA Pro and Ghidra. Also experienced in
-            hardware-level embedded hacking.
+            using tools like IDA Pro. Also experienced in hardware-level
+            embedded hacking.
           </dd>
         </div>
       </dl>
@@ -300,10 +312,65 @@ import Sidebar from "../components/Sidebar.astro";
   <Sidebar slot="sidebar" />
 </BaseLayout>
 
+<script>
+  // CV PDF button: show a popup toast when clicked (PDF not ready yet)
+  function wireCvDownload() {
+    const btn = document.querySelector<HTMLButtonElement>("[data-cv-download]");
+    if (!btn || btn.dataset.wired) return;
+    btn.dataset.wired = "1";
+
+    btn.addEventListener("click", () => {
+      // Remove any existing toast first
+      document.querySelectorAll(".cv-toast").forEach((t) => t.remove());
+
+      const toast = document.createElement("div");
+      toast.className = "cv-toast";
+      toast.textContent = "PDF is being prepared — check back soon.";
+      document.body.appendChild(toast);
+
+      // Force reflow then animate in
+      requestAnimationFrame(() => toast.classList.add("is-visible"));
+
+      // Animate out after 2.5s, remove after animation
+      setTimeout(() => {
+        toast.classList.remove("is-visible");
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    });
+  }
+  wireCvDownload();
+  document.addEventListener("astro:page-load", wireCvDownload);
+</script>
+
 <style is:global>
   /* Widen the main content column on the CV page so the paper can breathe */
   .main-content:has(.cv-paper) {
     max-width: 1080px;
+  }
+
+  /* Toast pop-up for the Download-CV button (global because the element
+     is created dynamically by JS and scoped styles wouldn't match it) */
+  .cv-toast {
+    position: fixed;
+    top: calc(var(--header-height, 64px) + 16px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-12px);
+    background: #120a18;
+    border: 1px solid #ff6b2a;
+    color: #fff1dc;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 0.9rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 9999;
+  }
+  .cv-toast.is-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 </style>
 
@@ -403,6 +470,13 @@ import Sidebar from "../components/Sidebar.astro";
     margin-top: 6px;
     letter-spacing: 0.02em;
   }
+  .cv-advisor {
+    font-family: var(--font-mono);
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
+    margin-top: 4px;
+  }
   .cv-tagline {
     font-family: var(--font-mono);
     font-size: 0.82rem;
@@ -441,6 +515,7 @@ import Sidebar from "../components/Sidebar.astro";
     text-decoration: none;
     border-color: var(--accent);
   }
+  .cv-paper .cv-download svg { flex-shrink: 0; }
   .cv-paper .cv-link {
     display: inline-flex;
     align-items: center;

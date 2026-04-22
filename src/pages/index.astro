@@ -11,7 +11,8 @@ const allPosts = (await getCollection("blog"))
 
 const starred = allPosts
   .filter((p) => p.data.starred)
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 3);
 
 const recent = [...allPosts]
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
@@ -22,7 +23,7 @@ const recent = [...allPosts]
   <section class="hero">
     <h1 class="hero-title">SunHyuk Hwang</h1>
     <p class="hero-subtitle">
-      Satellite RF security researcher.<br />
+      Satellite Security Researcher.<br />
       Hacking, space, and AI.
     </p>
     <div class="hero-links">
@@ -32,28 +33,27 @@ const recent = [...allPosts]
     </div>
   </section>
 
-  {/* ── Currently ── */}
-  <section class="home-section">
-    <h2 class="section-title">// Currently</h2>
-    <div class="currently-card">
-      <div class="currently-row">
-        <span class="currently-tag">Researching</span>
-        <span class="currently-text">
-          Independent security analysis of Iridium satellite protocols
-        </span>
+  {/* ── Recent posts ── */}
+  {recent.length > 0 && (
+    <section class="home-section">
+      <h2 class="section-title">// Recent posts</h2>
+      <div class="post-list">
+        {recent.map((post) => (
+          <PostCard
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            tags={post.data.tags}
+            href={`/blog/${post.id}`}
+          />
+        ))}
       </div>
-      <div class="currently-row">
-        <span class="currently-tag">Building</span>
-        <span class="currently-text">
-          OpenVSA — virtual satellite ground station for RF security research
-        </span>
-      </div>
-    </div>
-  </section>
+    </section>
+  )}
 
   {/* ── Featured Projects ── */}
   <section class="home-section">
-    <h2 class="section-title">// Featured Projects</h2>
+    <h2 class="section-title">// Projects</h2>
     <div class="project-grid">
       <a href="/blog/mrradio" class="project-card">
         <div class="project-thumb">
@@ -107,24 +107,6 @@ const recent = [...allPosts]
       </h2>
       <div class="post-list">
         {starred.map((post) => (
-          <PostCard
-            title={post.data.title}
-            description={post.data.description}
-            date={post.data.date}
-            tags={post.data.tags}
-            href={`/blog/${post.id}`}
-          />
-        ))}
-      </div>
-    </section>
-  )}
-
-  {/* ── Recent posts ── */}
-  {recent.length > 0 && (
-    <section class="home-section">
-      <h2 class="section-title">Recent posts</h2>
-      <div class="post-list">
-        {recent.map((post) => (
           <PostCard
             title={post.data.title}
             description={post.data.description}
