@@ -50,6 +50,7 @@ import Sidebar from "../components/Sidebar.astro";
           <span class="cv-date">Mar 2025 – Feb 2027 (expected)</span>
         </div>
         <ul>
+          <li>GPA: 4.2/4.3 (in progress)</li>
           <li>
             Graduate researcher,
             <a href="https://pwnlab.kr/" target="_blank" rel="noopener">PWNLAB</a>
@@ -91,6 +92,7 @@ import Sidebar from "../components/Sidebar.astro";
       <h2>// Publications</h2>
       <ol class="cv-pubs">
         <li>
+          <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
           <strong>
             "Design and Implementation of a Virtual Satellite Antenna System
             for Satellite RF Hacking Research."
@@ -99,6 +101,7 @@ import Sidebar from "../components/Sidebar.astro";
           (CISC-S'26), Busan, Korea. <em>Scheduled for oral presentation May 8, 2026.</em>
         </li>
         <li>
+          <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
           <strong>"Analysis of Security Threats in Satellite Control Communication Using the NOS3 Satellite System Simulator."</strong>
           Conference on Information Security and Cryptography (CISC-W'24),
           Nov 2024. ·
@@ -110,6 +113,7 @@ import Sidebar from "../components/Sidebar.astro";
           >view paper ↗</a>
         </li>
         <li>
+          <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
           <strong>"Research on Exploiting Open Source Ground Stations through Satellite Spoofing Signal."</strong>
           Korea Computer Congress (KCC 2024), Jun 2024. ·
           <a
@@ -120,6 +124,7 @@ import Sidebar from "../components/Sidebar.astro";
           >view paper ↗</a>
         </li>
         <li>
+          <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
           <strong>"Analysis of the Communication Protocol in Open-Source Drone (PX4)."</strong>
           Conference on Information Security and Cryptography — Winter
           (CISC-W'23), Dec 2023.
@@ -645,6 +650,13 @@ import Sidebar from "../components/Sidebar.astro";
     color: var(--text-muted);
     font-style: italic;
     margin-top: 2px;
+  }
+  .cv-pub-flag {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 1em;
+    line-height: 1;
+    vertical-align: baseline;
   }
 
   /* Talks list — slightly tighter */
