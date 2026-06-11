@@ -146,10 +146,28 @@ button:disabled{opacity:0.5;cursor:not-allowed}
     return;
   }
 
+  // Handshake — netlify-auth-js (which Decap CMS embeds) only arms its
+  // success listener after seeing this message from the popup. Without it,
+  // the eventual 'authorization:github:success:' message is silently dropped.
+  // Resend it periodically until we either get echoed back or the form is
+  // submitted, in case the listener attaches a moment after popup opens.
+  var handshakeAck = false;
+  function sendHandshake(){
+    if (handshakeAck) return;
+    try { opener.postMessage('authorizing:github', '*'); } catch(_){}
+  }
+  window.addEventListener('message', function(e){
+    if (e.data === 'authorizing:github') handshakeAck = true;
+  });
+  sendHandshake();
+  var handshakeTimer = setInterval(sendHandshake, 200);
+  setTimeout(function(){ clearInterval(handshakeTimer); }, 3000);
+
   form.addEventListener('submit', async function(e){
     e.preventDefault();
     btn.disabled = true;
     msg.hidden = true;
+    clearInterval(handshakeTimer);
 
     try {
       var resp = await fetch('/oauth/auth', {
@@ -165,19 +183,22 @@ button:disabled{opacity:0.5;cursor:not-allowed}
         return;
       }
 
+      // Re-send handshake right before success, in case Decap CMS only
+      // installed its listener late.
+      try { opener.postMessage('authorizing:github', '*'); } catch(_){}
+
       var payload = JSON.stringify({ token: data.token, provider: 'github' });
-      opener.postMessage('authorization:github:success:' + payload, '*');
-      show('Authorized. Closing…', 'ok');
-      setTimeout(function(){ try { window.close(); } catch(_) {} }, 400);
+      // Small delay lets Decap process the handshake before the success.
+      setTimeout(function(){
+        try { opener.postMessage('authorization:github:success:' + payload, '*'); } catch(_){}
+        show('Authorized. Closing…', 'ok');
+        setTimeout(function(){ try { window.close(); } catch(_) {} }, 800);
+      }, 50);
     } catch (err) {
       show('Network error.', 'err');
       btn.disabled = false;
     }
   });
-
-  // Handshake support: Decap CMS may broadcast 'authorizing:github' first.
-  // If our user has already authenticated in this session we'd respond here,
-  // but in this flow we always require fresh password entry.
 })();
 </script>
 </body></html>`;
