@@ -8,11 +8,17 @@ main = "src/worker/index.ts"
 compatibility_date = "2026-02-20"
 
 # Static assets (the built Astro site) served by the Worker.
-# The Worker code only runs for paths it explicitly handles (e.g. /oauth/*);
-# everything else falls through to these assets automatically.
+#
+# `run_worker_first = true` is REQUIRED: by default Cloudflare's edge serves
+# matching assets *before* invoking the Worker, which means Worker routes
+# like /oauth/auth would be intercepted by the 404 page from `dist/` and
+# the Worker would never see them. Forcing the Worker to run first means
+# we get to decide whether to handle the request ourselves (OAuth) or
+# delegate to assets via env.ASSETS.fetch (everything else).
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+run_worker_first = true
 not_found_handling = "404-page"
 
 # Plain (non-secret) variables.
