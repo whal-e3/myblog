@@ -22,9 +22,8 @@ run_worker_first = true
 not_found_handling = "404-page"
 
 # Plain (non-secret) variables.
-# Secrets (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) are added via the
-# Cloudflare dashboard, NEVER committed to this repo.
+# Secrets (GITHUB_PAT, CMS_PASSWORD) are added via the Cloudflare dashboard,
+# NEVER committed to this repo.
 [vars]
-ALLOWED_GITHUB_LOGIN = "whal-e3"
 GITHUB_REPO = "whal-e3/myblog"
 SITE_ORIGIN = "https://sunhyuk.dev"
