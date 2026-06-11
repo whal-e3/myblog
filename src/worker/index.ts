@@ -8,17 +8,22 @@
 //    make brute-force impractical.
 // 2. On success the Worker hands the stored GitHub Personal Access Token
 //    (GITHUB_PAT, also a Cloudflare encrypted secret) to the browser via
-//    window.postMessage in the format Decap CMS expects. The PAT never
-//    appears in logs, response headers, or anywhere outside this script.
+//    a fetch() response. The popup page then window.postMessage's the
+//    token to its opener (the Decap CMS /admin tab). The PAT never appears
+//    in logs, response headers, or anywhere outside this script.
 // 3. The PAT is a Fine-grained Personal Access Token scoped to a SINGLE
 //    repository (whal-e3/myblog) with only Contents Read+Write. Even if it
 //    leaked, the blast radius is one blog repo and nothing else.
 // 4. The login form carries a CSRF nonce in an httpOnly+secure+SameSite=Lax
 //    cookie, verified constant-time against a hidden form field. Defense
 //    in depth — primary protection is the password itself.
-// 5. OAuth handling is refused on any origin other than SITE_ORIGIN, so
+// 5. The popup submits via fetch() rather than a browser form POST so that
+//    no document navigation occurs. Browser-stripping of window.opener
+//    after POST navigation was breaking the token handoff, so we keep the
+//    popup at /oauth/auth the whole time.
+// 6. OAuth handling is refused on any origin other than SITE_ORIGIN, so
 //    workers.dev URLs and preview deploys can't be used to bypass.
-// 6. Strict CSP, HSTS, frame-ancestors none, Cache-Control no-store.
+// 7. Strict CSP, HSTS, frame-ancestors none, Cache-Control no-store.
 //
 // Everything else falls through to static assets (Astro build output).
 
@@ -50,7 +55,7 @@ export default {
     }
 
     if (url.pathname === "/oauth/auth") {
-      if (request.method === "GET") return showLoginForm(env);
+      if (request.method === "GET") return showLoginForm();
       if (request.method === "POST") return handleLogin(request, env);
       return new Response("Method not allowed", {
         status: 405,
@@ -63,26 +68,23 @@ export default {
 };
 
 // ─── GET /oauth/auth ───────────────────────────────────────────────────────
-// Render the password form with a fresh CSRF nonce.
+// Render the password form. Submission happens via fetch() so the popup
+// never navigates and window.opener stays valid for postMessage.
 
-function showLoginForm(_env: Env, errorMsg?: string): Response {
+function showLoginForm(): Response {
   const csrf = generateNonce();
   const headers = new Headers({
     ...securityHeaders(),
     "Content-Type": "text/html; charset=utf-8",
     "Content-Security-Policy":
-      "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; " +
-      "base-uri 'none'; frame-ancestors 'none'",
+      "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+      "connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   });
   headers.append(
     "Set-Cookie",
     `${CSRF_COOKIE}=${csrf}; Path=/oauth; Max-Age=${CSRF_TTL_SECONDS}; ` +
       `HttpOnly; Secure; SameSite=Lax`,
   );
-
-  const errorHtml = errorMsg
-    ? `<p class="error">${escapeHtml(errorMsg)}</p>`
-    : "";
 
   const body = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -108,29 +110,90 @@ button{width:100%;margin-top:18px;padding:12px;background:#ff6b2a;color:#0a0510;
   border:none;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;
   transition:background 0.15s}
 button:hover{background:#ff7e44}
-.error{color:#ff6b6b;font-size:0.85rem;margin:0 0 14px;padding:10px 14px;
-  background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);
-  border-radius:8px}
+button:disabled{opacity:0.5;cursor:not-allowed}
+.msg{font-size:0.85rem;margin:0 0 14px;padding:10px 14px;border-radius:8px}
+.err{color:#ff6b6b;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3)}
+.ok{color:#6bff8a;background:rgba(107,255,138,0.08);border:1px solid rgba(107,255,138,0.3)}
 </style>
 </head><body>
-<form method="POST" action="/oauth/auth" autocomplete="off">
+<form id="login" autocomplete="off">
   <h1>sunhyuk.dev CMS</h1>
   <p class="sub">Restricted access</p>
-  ${errorHtml}
+  <div id="msg" hidden></div>
   <label for="p">Password</label>
   <input type="password" name="password" id="p" autofocus required>
   <input type="hidden" name="csrf" value="${csrf}">
-  <button type="submit">Sign in</button>
+  <button id="btn" type="submit">Sign in</button>
 </form>
+<script>
+(function(){
+  // Capture opener immediately, before anything can clobber it.
+  var opener = window.opener;
+  var form = document.getElementById('login');
+  var btn  = document.getElementById('btn');
+  var msg  = document.getElementById('msg');
+
+  function show(text, cls){
+    msg.hidden = false;
+    msg.className = 'msg ' + cls;
+    msg.textContent = text;
+  }
+
+  if (!opener) {
+    // Should not happen with Decap's window.open, but guard anyway.
+    show('This page must be opened from /admin.', 'err');
+    btn.disabled = true;
+    return;
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    btn.disabled = true;
+    msg.hidden = true;
+
+    try {
+      var resp = await fetch('/oauth/auth', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: new FormData(form),
+      });
+      var data = await resp.json();
+
+      if (!resp.ok || !data.token) {
+        show(data.error || 'Sign-in failed.', 'err');
+        btn.disabled = false;
+        return;
+      }
+
+      var payload = JSON.stringify({ token: data.token, provider: 'github' });
+      opener.postMessage('authorization:github:success:' + payload, '*');
+      show('Authorized. Closing…', 'ok');
+      setTimeout(function(){ try { window.close(); } catch(_) {} }, 400);
+    } catch (err) {
+      show('Network error.', 'err');
+      btn.disabled = false;
+    }
+  });
+
+  // Handshake support: Decap CMS may broadcast 'authorizing:github' first.
+  // If our user has already authenticated in this session we'd respond here,
+  // but in this flow we always require fresh password entry.
+})();
+</script>
 </body></html>`;
 
   return new Response(body, { status: 200, headers });
 }
 
 // ─── POST /oauth/auth ──────────────────────────────────────────────────────
-// Verify CSRF + password (constant-time), then deliver PAT via postMessage.
+// Verify CSRF + password (constant-time), respond JSON with PAT or error.
 
 async function handleLogin(request: Request, env: Env): Promise<Response> {
+  const jsonHeaders = new Headers({
+    ...securityHeaders(),
+    "Content-Type": "application/json",
+  });
+
   let password: string;
   let csrf: string;
   try {
@@ -138,71 +201,38 @@ async function handleLogin(request: Request, env: Env): Promise<Response> {
     password = (form.get("password") as string) || "";
     csrf = (form.get("csrf") as string) || "";
   } catch {
-    return showLoginForm(env, "Malformed form submission.");
+    return new Response(JSON.stringify({ error: "Malformed submission." }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
   }
 
   const cookieCsrf = readCookie(request, CSRF_COOKIE);
   if (!cookieCsrf || !constantTimeEqual(cookieCsrf, csrf)) {
-    return showLoginForm(env, "Session expired. Try again.");
+    return new Response(JSON.stringify({ error: "Session expired. Refresh and try again." }), {
+      status: 400,
+      headers: jsonHeaders,
+    });
   }
 
   if (!constantTimeEqual(password, env.CMS_PASSWORD)) {
     // Fixed delay so timing reveals nothing AND throttles brute force.
     await new Promise((r) => setTimeout(r, FAILED_LOGIN_DELAY_MS));
-    return showLoginForm(env, "Wrong password.");
+    return new Response(JSON.stringify({ error: "Wrong password." }), {
+      status: 401,
+      headers: jsonHeaders,
+    });
   }
 
-  return tokenResponsePage(env.GITHUB_PAT);
-}
-
-// ─── Token handoff page ────────────────────────────────────────────────────
-// Sends the PAT to window.opener (the Decap CMS popup parent) using the
-// exact message format Decap CMS waits for.
-
-function tokenResponsePage(token: string): Response {
-  const payload = JSON.stringify({ token, provider: "github" });
-  const safe = payload.replace(/</g, "\\u003c").replace(/>/g, "\\u003e");
-  const script = `
-(function(){
-  var message = 'authorization:github:success:' + ${JSON.stringify(safe)};
-  function send(){
-    if (!window.opener) return;
-    window.opener.postMessage(message, '*');
-  }
-  window.addEventListener('message', function(e){
-    if (e.data === 'authorizing:github') send();
-  }, false);
-  send();
-})();
-`.trim();
-
-  const csp = [
-    "default-src 'none'",
-    "script-src 'unsafe-inline'",
-    "style-src 'unsafe-inline'",
-    "base-uri 'none'",
-    "form-action 'none'",
-    "frame-ancestors 'none'",
-  ].join("; ");
-
-  const headers = new Headers({
-    ...securityHeaders(),
-    "Content-Type": "text/html; charset=utf-8",
-    "Content-Security-Policy": csp,
-  });
   // Burn the CSRF cookie — single use.
-  headers.append(
+  jsonHeaders.append(
     "Set-Cookie",
     `${CSRF_COOKIE}=; Path=/oauth; Max-Age=0; HttpOnly; Secure; SameSite=Lax`,
   );
-
-  const body =
-    `<!doctype html><meta charset="utf-8"><title>Authorized</title>` +
-    `<style>body{font-family:system-ui,sans-serif;background:#0a0510;color:#f5e6d4;` +
-    `padding:48px;text-align:center}</style>` +
-    `<p>Authorized. You can close this window.</p>` +
-    `<script>${script}</script>`;
-  return new Response(body, { status: 200, headers });
+  return new Response(JSON.stringify({ token: env.GITHUB_PAT }), {
+    status: 200,
+    headers: jsonHeaders,
+  });
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -242,13 +272,4 @@ function securityHeaders(): Record<string, string> {
     "Cache-Control": "no-store, no-cache, must-revalidate",
     Pragma: "no-cache",
   };
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
