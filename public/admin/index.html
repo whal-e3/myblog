@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <!--
+      Defense-in-depth CSP.
+
+      The PRIMARY defense against a compromised CDN is the SRI hash on the
+      Decap script tag below — the browser refuses to execute the bundle
+      unless its SHA-384 matches exactly.
+
+      The CSP here is the SECONDARY layer: even if Decap itself had a flaw,
+      it can never load JS from outside unpkg/our origin, never embed our
+      page in a frame, and never exfiltrate to an unknown endpoint.
+
+      'unsafe-inline' / 'unsafe-eval' are required by Decap's React/Webpack
+      runtime. Acceptable trade-off given the script source is locked.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self' https://unpkg.com 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://unpkg.com;
+        font-src 'self' data: https://unpkg.com;
+        img-src 'self' data: blob: https://*.githubusercontent.com;
+        connect-src 'self' https://api.github.com https://github.com https://unpkg.com;
+        frame-src 'self' https://www.youtube.com https://player.vimeo.com;
+        base-uri 'self';
+        form-action 'self' https://github.com;
+        frame-ancestors 'none';
+      "
+    />
+    <title>Content Manager</title>
+  </head>
+  <body>
+    <!--
+      Decap CMS pinned to 3.5.0 with Subresource Integrity (SHA-384).
+      The browser refuses to execute the bundle if its hash doesn't match —
+      even if unpkg itself is compromised.
+
+      To bump the version, regenerate the hash:
+          curl -sL https://unpkg.com/decap-cms@<NEW>/dist/decap-cms.js \
+            | openssl dgst -sha384 -binary | openssl base64 -A
+    -->
+    <script
+      src="https://unpkg.com/decap-cms@3.5.0/dist/decap-cms.js"
+      integrity="sha384-0qv+oSpofFn9VZ7RJ+vV8Tc4zcYtho3xHfLsM2pPimFVFoCMuU37MnWWxv83yHoR"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

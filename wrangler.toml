@@ -1,0 +1,24 @@
+# Cloudflare Worker + Static Assets configuration.
+#
+# IMPORTANT: `name` MUST match the existing Worker name in your Cloudflare
+# dashboard, otherwise you'll create a new Worker and orphan the old one.
+# Check: Cloudflare Dashboard → Workers & Pages → your project → URL slug.
+name = "sunhyuksblog"
+main = "src/worker/index.ts"
+compatibility_date = "2026-02-20"
+
+# Static assets (the built Astro site) served by the Worker.
+# The Worker code only runs for paths it explicitly handles (e.g. /oauth/*);
+# everything else falls through to these assets automatically.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+# Plain (non-secret) variables.
+# Secrets (GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET) are added via the
+# Cloudflare dashboard, NEVER committed to this repo.
+[vars]
+ALLOWED_GITHUB_LOGIN = "whal-e3"
+GITHUB_REPO = "whal-e3/myblog"
+SITE_ORIGIN = "https://sunhyuk.dev"

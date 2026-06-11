@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /admin/
+Disallow: /oauth/
+
+Sitemap: https://sunhyuk.dev/sitemap-index.xml

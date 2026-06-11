@@ -1,0 +1,50 @@
+# Decap CMS configuration.
+# Schema fields mirror src/content.config.ts so what you publish here passes
+# Astro's Zod validation at build time.
+
+backend:
+  name: github
+  repo: whal-e3/myblog
+  branch: main
+  # Route Decap's OAuth through our own Cloudflare Worker instead of
+  # Netlify's default broker. The Worker enforces the user allowlist.
+  base_url: https://sunhyuk.dev
+  auth_endpoint: oauth/auth
+
+# Force HTTPS for the editor session.
+site_url: https://sunhyuk.dev
+display_url: https://sunhyuk.dev
+publish_mode: simple
+
+# Uploaded images land here on disk; the URL Astro renders is `public_folder`.
+media_folder: public/assets/content/blog
+public_folder: /assets/content/blog
+
+collections:
+  - name: blog
+    label: Blog posts
+    folder: src/content/blog
+    create: true
+    slug: "{{slug}}"
+    extension: md
+    format: frontmatter
+    summary: "{{title}} — {{date | date('YYYY-MM-DD')}}"
+    sortable_fields: [date, title]
+    view_filters:
+      - label: Drafts
+        field: draft
+        pattern: true
+      - label: Starred
+        field: starred
+        pattern: true
+    fields:
+      - { name: title, label: Title, widget: string }
+      - { name: description, label: Description, widget: text }
+      - { name: date, label: Date, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD" }
+      - { name: publishDate, label: "Scheduled publish date (optional — hides until then)", widget: datetime, required: false, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD" }
+      - { name: draft, label: Draft (hide everywhere), widget: boolean, default: false }
+      - { name: starred, label: Starred on homepage, widget: boolean, default: false }
+      - { name: tags, label: Tags, widget: list, required: false, default: [] }
+      - { name: cover, label: Cover image, widget: image, required: false, allow_multiple: false }
+      - { name: comments, label: Enable comments, widget: boolean, default: true }
+      - { name: body, label: Body, widget: markdown }
