@@ -23,7 +23,7 @@ function formatDate(d: Date) {
 ---
 
 <BaseLayout title={title} description={description} sidebar={sidebar}>
-  <article>
+  <article class="post-paper">
     <div class="post-header">
       <h1 class="post-title">{title}</h1>
       <div class="post-meta">
@@ -44,3 +44,24 @@ function formatDate(d: Date) {
   </article>
   <slot name="sidebar" slot="sidebar" />
 </BaseLayout>
+
+<style>
+  /* Subtle dark backdrop behind the post so prose stays readable on the
+     nebula background. Same look as the CV page's .cv-paper for consistency. */
+  .post-paper {
+    background: rgba(10, 5, 16, 0.62);
+    border: 1px solid rgba(245, 230, 212, 0.12);
+    border-radius: 16px;
+    padding: 48px 60px 44px;
+    box-shadow:
+      0 10px 40px rgba(0, 0, 0, 0.5),
+      inset 0 0 60px rgba(245, 230, 212, 0.02);
+  }
+
+  @media (max-width: 768px) {
+    .post-paper {
+      padding: 28px 22px 24px;
+      border-radius: 12px;
+    }
+  }
+</style>
