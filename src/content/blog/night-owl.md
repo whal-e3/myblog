@@ -82,7 +82,7 @@ established:
 
 Loaded into a waterfall/spectrogram viewer like **Inspectrum**, the structure is obvious by eye:
 discrete **bursts** scattered across the 20 s, each parked on a clean **center tone** (its channel).
-They stand out clearly — no denoising needed. Extracting their exact start/end times: **82 bursts**, most ~30–37 ms (the real clicks) plus a few shorter ~8–19 ms.
+They stand out clearly — no denoising needed. Extracting their exact start/end times: **82 bursts**.
 
 ![Step 3 — all 82 detected bursts across the 20 s capture](/assets/content/writeup/ctf/defcon2026_qual/step3_detect.png)
 *The 82 bursts (green = every detection is a candidate) on the full waterfall — found, but not yet classified.*
