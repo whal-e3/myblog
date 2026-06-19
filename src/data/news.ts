@@ -9,6 +9,6 @@ export interface NewsItem {
 export const news: NewsItem[] = [
   {
     date: "2026-04-22",
-    text: "Presenting at CISC-S'26 in Busan on May 7 — VSA (Virtual Satellite Antenna) and mrradio.kr.",
+    text: "Presented at CISC-S'26 in Busan on May 8 — VSA (Virtual Satellite Antenna) and mrradio.kr.",
   },
 ];
