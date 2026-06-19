@@ -53,14 +53,13 @@ We are given a single file, **`lecture_capture.iq`**.
 ## 2. Parsing the capture
 
 ### lecture_capture.iq
-- `80,004,096` bytes = **4096‑byte `ICLKR` header** + **80,000,000** bytes of IQ
-- payload = 10,000,000 `complex64` samples @ 500 kHz = **20 s** of RF at 917 MHz
+- `80,004,096` bytes = **4096‑byte
+  - `ICLKR` header** + **80,000,000** bytes of IQ
+  - payload = 10,000,000 `complex64` samples @ 500 kHz = **20 s** of RF at 917 MHz
 
 ### Header 
 
-The header is a small custom struct beginning with the magic `ICLKR`. **There is no spec** — every
-label below was deduced. The last column records *how confident* each one is and how it was
-established:
+The header is a small custom struct beginning with the magic `ICLKR`. There is no spec so had to guess them (with help of an AI). The last column records how confident each one is and how it was established:
 
 | offset | field | value | how I knew |
 |-------:|-------|-------|------------|
@@ -89,14 +88,13 @@ They stand out clearly — no denoising needed. Extracting their exact start/end
 
 ### Per‑burst structure
 
-For each burst I followed how its frequency changed over time (and double-checked with a
-spectrogram). Every full click has the **same two‑tone shape**:
+For each burst I followed how its frequency changed over time (and double-checked with a spectrogram). Every full click has the **same two‑tone shape**:
 
 ![One click in Inspectrum — short preamble tone + longer data tone](/assets/content/writeup/ctf/defcon2026_qual/click_two_tone.png)
 *One click in Inspectrum (time →, frequency ↕)
 
-* A short **preamble** burst during the amplitude ramp‑up.
-* A longer **data** burst for the rest of the burst.
+* A short **preamble burst** during the amplitude ramp‑up.
+* A longer **data burst** for the rest of the burst.
 * **No** hidden modulation inside. Just a burst.
 
 ### Guesses
@@ -105,17 +103,18 @@ Measuring each tone's frequency precisely (to within a few Hz), two tidy pattern
 
 - Each student sits on a **channel** — a frequency that's an exact multiple of 3500 Hz (`n·3500`).
   That channel number `n` is effectively the student's ID.
-- Each burst sits a small, neat distance off that channel — always a multiple of **150 Hz**. That
+- Each burst(clicks) sits a small, neat distance off that channel — always a multiple of **150 Hz**. That
   distance ÷ 150 is an integer **code**
-  - data burst : `data_code = (data_burst_freq − n·3500) / 150`
-  - preamble burst : `pre_code`
+  - `pre_code` : Preamble burst code
+  - `data_code` : Data burst code (`data_code = (data_burst_freq − n·3500) / 150`)
+
+This step took me a long time because I thought multiple frequency channels were used for each student (since the challenge said it used FHSS) and tried to find the pattern. But it didn't work out and I did some research and found that the clickers might not use FHSS (https://mhe.my.site.com/iclicker/s/article/How-to-Set-a-Fixed-Frequency-for-an-iClicker-Base). So I tried the idea that each channels is for a single student.
 
 ---
 
 ## 4. Removing night owls and speed clickers
 
-Plotting data‑tone frequency vs. time shows ~15 students, each parked on a constant channel
-and transmitting a short burst of clicks in a roughly **1.3 s time slot**, in sequence. It's time to remove the Night Owls and Speed Clickers.
+Plotting data‑tone frequency vs. time shows ~15 students, each parked on a constant channel and transmitting a short burst of clicks. It's time to remove the Night Owls and Speed Clickers.
 
 | class | time | bursts | students | action |
 |-------|------|:------:|:--------:|--------|
@@ -125,7 +124,7 @@ and transmitting a short burst of clicks in a roughly **1.3 s time slot**, in se
 
 If the center tone started before 2 sec, I've sorted it as a Speed Clicker. If the center tone started before 15 sec, I've sorted it as the Legitimate.
 
-That leaves **11 legitimate students**, on channels `n = -3, -13, -21, -25, -27, -28, -20, 5, -12, 24, 27`, with **68 bursts** between them. 
+That leaves **11 legitimate students**, on channels `n = -3, -13, -21, -25, -27, -28, -20, 5, -12, 24, 27`, with **61 bursts** between them. 
 
 ![Step 4 — bursts colored by arrival-time class](/assets/content/writeup/ctf/defcon2026_qual/step4_classify.png)
 *Bursts by class: **green** = the **11 legit students** (kept); **orange** = >15 s night‑owl replays (drop); **red** = speed‑clickers (drop).*
@@ -134,9 +133,11 @@ That leaves **11 legitimate students**, on channels `n = -3, -13, -21, -25, -27,
 
 ## 5. Narrowing the legit bursts to the answers
 
-- **61 click candidates** = 68 legit bursts − 7 broadband pulses (wideband)
+- **61 click candidates**
   - **Keep 28** (`pre_code == 9`)
   - **drop 33** (`pre_code ≠ 9`)
+
+The `pre_code == 9` was found using AI. There were other pre_code values (1, 2, 3, 10, 11, 16, 17, 18, 19) and the only thing that generated 'words' was '9'.
 
 ![Step 5 — the 61 click candidates colored by pre_code](/assets/content/writeup/ctf/defcon2026_qual/step5_precode.png)
 *The **61 click candidates** = **7 broadband pulses** + **28 green `pre_code = 9` (the real answers)** + **33 gold `pre_code ≠ 9` (decoys)**.
@@ -170,14 +171,7 @@ codepoint = round( 95 + (data_code·150 + 2250) / 150.8 )
 owl_sleeps_but_not_robin          ('_' = the space code, −15)
 ```
 
----
-
-## 7. Final answer
-
-```
-message = owl sleeps but not robin
-flag    = bbb{owl_sleeps_but_not_robin}
-```
+> 🚩 bbb{owl_sleeps_but_not_robin}
 
 ---
 
