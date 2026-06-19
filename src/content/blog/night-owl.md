@@ -105,7 +105,7 @@ Measuring each tone's frequency precisely (to within a few Hz), two tidy pattern
   That channel number `n` is effectively the student's ID.
 - Each burst(clicks) sits a small, neat distance off that channel — always a multiple of **150 Hz**. That
   distance ÷ 150 is an integer **code**
-  - `pre_code` : Preamble burst code
+  - `pre_code` : Preamble burst code (`pre_code = (preamble_burst_freq − n·3500) / 150`)
   - `data_code` : Data burst code (`data_code = (data_burst_freq − n·3500) / 150`)
 
 This step took me a long time because I thought multiple frequency channels were used for each student (since the challenge said it used FHSS) and tried to find the pattern. But it didn't work out and I did some research and found that the clickers might not use FHSS (https://mhe.my.site.com/iclicker/s/article/How-to-Set-a-Fixed-Frequency-for-an-iClicker-Base). So I tried the idea that each channels is for a single student.
@@ -137,7 +137,7 @@ That leaves **11 legitimate students**, on channels `n = -3, -13, -21, -25, -27,
   - **Keep 28** (`pre_code == 9`)
   - **drop 33** (`pre_code ≠ 9`)
 
-The `pre_code == 9` was found using AI. There were other pre_code values (1, 2, 3, 10, 11, 16, 17, 18, 19) and the only thing that generated 'words' was '9'.
+The `pre_code == 9` is from the `pre_code = (preamble_burst_freq − n·3500) / 150` in section 3. There were other pre_code values (1, 2, 3, 10, 11, 16, 17, 18, 19) and the only thing that generated 'words' was '9'.
 
 ![Step 5 — the 61 click candidates colored by pre_code](/assets/content/writeup/ctf/defcon2026_qual/step5_precode.png)
 *The **61 click candidates** = **7 broadband pulses** + **28 green `pre_code = 9` (the real answers)** + **33 gold `pre_code ≠ 9` (decoys)**.
