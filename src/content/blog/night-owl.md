@@ -64,6 +64,7 @@ The header is a small custom struct beginning with the magic `ICLKR`. There is n
 | offset | field | value | how I knew |
 |-------:|-------|-------|------------|
 | 0x00 | magic | `ICLKR` | ✅ **obvious** |
+| 0x05–0x07 | padding | (3 bytes) | ⬜ likely alignment padding |
 | 0x08 | version (u32) | `2` | ❓ |
 | 0x0C | sample_rate (u32) | `500000` (500 kHz) | 🔎 **checked** — `500000` is read straight from here; it's the only rate that makes the file's size and 20 s length add up, and the data turns into clean tones when you use it (a wrong rate would just give noise) |
 | 0x10 | center_freq (u32) | `917000000` (917 MHz) | ✅ **obvious** |
@@ -97,7 +98,7 @@ For each burst I followed how its frequency changed over time (and double-checke
 <figure style="text-align: center;">
   <img src="/assets/content/writeup/ctf/defcon2026_qual/click_two_tone.png"
        alt="One click in Inspectrum — short preamble tone + longer data tone"
-       style="max-width: 480px; width: 50%;" />
+       style="max-width: 400px; width: 50%;" />
   <figcaption><em>One click in Inspectrum (time →, frequency ↕)</em></figcaption>
 </figure>
 
@@ -111,7 +112,7 @@ Measuring each tone's frequency precisely (to within a few Hz), two tidy pattern
 
 - Each student sits on a **channel** — a frequency that's an exact multiple of 3500 Hz (`n·3500`).
   That channel number `n` is effectively the student's ID.
-- Each burst(clicks) sits a small, neat distance off that channel — always a multiple of **150 Hz**. That
+- Each burst (a click) sits a small, neat distance off that channel — always a multiple of **150 Hz**. That
   distance ÷ 150 is an integer **code**
   - `pre_code` : Preamble burst code (`pre_code = (preamble_burst_freq − n·3500) / 150`)
   - `data_code` : Data burst code (`data_code = (data_burst_freq − n·3500) / 150`)
@@ -122,7 +123,7 @@ This step took me a long time because I thought multiple frequency channels were
 
 ## 4. Removing night owls and speed clickers
 
-Plotting data‑tone frequency vs. time shows ~15 students, each parked on a constant channel and transmitting a short burst of clicks. It's time to remove the Night Owls and Speed Clickers.
+Plotting data‑tone frequency vs. time shows ~16 students, each parked on a constant channel and transmitting a short burst of clicks. It's time to remove the Night Owls and Speed Clickers.
 
 | class | time | bursts | students | action |
 |-------|------|:------:|:--------:|--------|
@@ -195,6 +196,6 @@ owl_sleeps_but_not_robin          ('_' = the space code, −15)
 
 ---
 
-## 9. Review
+## 7. Review
 
 I'm not sure whether the signal could be called **FHSS**. If my solution is correct, since students use their own frequency channels, I think it's closer to FDMA (Frequency Division Multiple Access). I had to remove 'J' and 'I' just because they weren't fitting so maybe there's a better solution.
