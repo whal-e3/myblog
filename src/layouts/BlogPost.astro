@@ -65,3 +65,25 @@ function formatDate(d: Date) {
     }
   }
 </style>
+
+<style is:global>
+  /* Tighten the figure/figcaption layout so captions sit close under their
+     image instead of floating with the browser-default 16-40px gap. */
+  .prose figure {
+    margin: 1.4em auto 0.5em;
+  }
+  .prose figure img {
+    display: block;
+    margin: 0 auto;
+  }
+  .prose figcaption {
+    margin-top: 4px;
+    font-size: 0.86rem;
+    line-height: 1.45;
+    color: var(--text-muted);
+    text-align: center;
+  }
+  .prose figcaption code {
+    font-size: 0.82rem;
+  }
+</style>

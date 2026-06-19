@@ -53,8 +53,8 @@ We are given a single file, **`lecture_capture.iq`**.
 ## 2. Parsing the capture
 
 ### lecture_capture.iq
-- `80,004,096` bytes = **4096‑byte
-  - `ICLKR` header** + **80,000,000** bytes of IQ
+- `80,004,096` bytes = 4096‑byte
+  - `ICLKR` header + **80,000,000** bytes of IQ
   - payload = 10,000,000 `complex64` samples @ 500 kHz = **20 s** of RF at 917 MHz
 
 ### Header 
@@ -81,17 +81,25 @@ The header is a small custom struct beginning with the magic `ICLKR`. There is n
 
 Loaded into a waterfall/spectrogram viewer like **Inspectrum**, the structure is obvious by eye:
 discrete **bursts** scattered across the 20 s, each parked on a clean **center tone** (its channel).
-They stand out clearly — no denoising needed. Extracting their exact start/end times: **82 bursts**.
+They stand out clearly — no denoising needed. Extracting their exact start/end times: **68 bursts**.
 
-![Step 3 — all 82 detected bursts across the 20 s capture](/assets/content/writeup/ctf/defcon2026_qual/step3_detect.png)
-*The 82 bursts (green = every detection is a candidate) on the full waterfall — found, but not yet classified.*
+<figure style="text-align: center;">
+  <img src="/assets/content/writeup/ctf/defcon2026_qual/step3_detect.png"
+       alt="Step 3 — all 68 detected bursts across the 20 s capture"
+       style="width: 100%;" />
+  <figcaption><em>The 68 tone-clicks (green) on the full waterfall — found, but not yet classified; the 14 faint broadband pulses are excluded.</em></figcaption>
+</figure>
 
 ### Per‑burst structure
 
 For each burst I followed how its frequency changed over time (and double-checked with a spectrogram). Every full click has the **same two‑tone shape**:
 
-![One click in Inspectrum — short preamble tone + longer data tone](/assets/content/writeup/ctf/defcon2026_qual/click_two_tone.png)
-*One click in Inspectrum (time →, frequency ↕)
+<figure style="text-align: center;">
+  <img src="/assets/content/writeup/ctf/defcon2026_qual/click_two_tone.png"
+       alt="One click in Inspectrum — short preamble tone + longer data tone"
+       style="max-width: 480px; width: 50%;" />
+  <figcaption><em>One click in Inspectrum (time →, frequency ↕)</em></figcaption>
+</figure>
 
 * A short **preamble burst** during the amplitude ramp‑up.
 * A longer **data burst** for the rest of the burst.
@@ -108,7 +116,7 @@ Measuring each tone's frequency precisely (to within a few Hz), two tidy pattern
   - `pre_code` : Preamble burst code (`pre_code = (preamble_burst_freq − n·3500) / 150`)
   - `data_code` : Data burst code (`data_code = (data_burst_freq − n·3500) / 150`)
 
-This step took me a long time because I thought multiple frequency channels were used for each student (since the challenge said it used FHSS) and tried to find the pattern. But it didn't work out and I did some research and found that the clickers might not use FHSS (https://mhe.my.site.com/iclicker/s/article/How-to-Set-a-Fixed-Frequency-for-an-iClicker-Base). So I tried the idea that each channels is for a single student.
+This step took me a long time because I thought multiple frequency channels were used for each student (since the challenge said it used FHSS) and tried to find the pattern. But it didn't work out and I did some research and found that the clickers might not use FHSS (https://mhe.my.site.com/iclicker/s/article/How-to-Set-a-Fixed-Frequency-for-an-iClicker-Base). So I tried the idea that each channel is for a single student.
 
 ---
 
@@ -118,29 +126,37 @@ Plotting data‑tone frequency vs. time shows ~15 students, each parked on a con
 
 | class | time | bursts | students | action |
 |-------|------|:------:|:--------:|--------|
-| **Speed clickers** | < 2 s | **4** (+ t=2.002) | ~2 | drop (random mashing) |
-| **Legitimate** | 2–15 s | **68** | **11** | keep — the message |
-| **Night owls** | > 15 s | **8** | ~3 | drop (replays) |
+| **Speed clickers** | < 2 s | **3** | ~2 | drop (random mashing) |
+| **Legitimate** | 2–15 s | **61** | **11** | keep — the message |
+| **Night owls** | > 15 s | **4** | ~3 | drop (replays) |
 
-If the center tone started before 2 sec, I've sorted it as a Speed Clicker. If the center tone started before 15 sec, I've sorted it as the Legitimate.
+If the center tone started before 2 sec, I've sorted it as a Speed Clicker. If the center tone started between 2 and 15 sec, I've sorted it as the Legitimate.
 
 That leaves **11 legitimate students**, on channels `n = -3, -13, -21, -25, -27, -28, -20, 5, -12, 24, 27`, with **61 bursts** between them. 
 
-![Step 4 — bursts colored by arrival-time class](/assets/content/writeup/ctf/defcon2026_qual/step4_classify.png)
-*Bursts by class: **green** = the **11 legit students** (kept); **orange** = >15 s night‑owl replays (drop); **red** = speed‑clickers (drop).*
+<figure style="text-align: center;">
+  <img src="/assets/content/writeup/ctf/defcon2026_qual/step4_classify.png"
+       alt="Step 4 — bursts colored by arrival-time class"
+       style="width: 100%;" />
+  <figcaption><em>Bursts by class: <strong>green</strong> = the <strong>11 legit students</strong> (kept); <strong>orange</strong> = &gt;15 s night-owl replays (drop); <strong>red</strong> = speed-clickers (drop).</em></figcaption>
+</figure>
 
 ---
 
 ## 5. Narrowing the legit bursts to the answers
 
-- **61 click candidates**
+- **61 legit click candidates**
   - **Keep 28** (`pre_code == 9`)
   - **drop 33** (`pre_code ≠ 9`)
 
 The `pre_code == 9` is from the `pre_code = (preamble_burst_freq − n·3500) / 150` in section 3. There were other pre_code values (1, 2, 3, 10, 11, 16, 17, 18, 19) and the only thing that generated 'words' was '9'.
 
-![Step 5 — the 61 click candidates colored by pre_code](/assets/content/writeup/ctf/defcon2026_qual/step5_precode.png)
-*The **61 click candidates** = **7 broadband pulses** + **28 green `pre_code = 9` (the real answers)** + **33 gold `pre_code ≠ 9` (decoys)**.
+<figure style="text-align: center;">
+  <img src="/assets/content/writeup/ctf/defcon2026_qual/step5_precode.png"
+       alt="Step 5 — the 61 click candidates colored by pre_code"
+       style="width: 100%;" />
+  <figcaption><em>The 61 click candidates = 28 green (pre_code = 9, real answers) + 33 gold (pre_code ≠ 9, decoys).</em></figcaption>
+</figure>
 
 ---
 
@@ -164,8 +180,12 @@ codepoint = round( 95 + (data_code·150 + 2250) / 150.8 )
 | `−36` | 74 | `J` — valid ASCII, but **uppercase** |
 | `−37` | 73 | `I` — valid ASCII, but **uppercase** |
 
-![Step 6 — decoded ASCII at each answer click](/assets/content/writeup/ctf/defcon2026_qual/step6_decode.png)
-*Each `pre_code = 9` click rendered as its **decoded ASCII character** — the **24** green letters/spaces spell the message reading; **red ✕** = the 4 out‑of‑range; **gold** = the 33 `pre_code ≠ 9` decoys. 
+<figure style="text-align: center;">
+  <img src="/assets/content/writeup/ctf/defcon2026_qual/step6_decode.png"
+       alt="Step 6 — decoded ASCII at each answer click"
+       style="width: 100%;" />
+  <figcaption><em>Each <code>pre_code = 9</code> click rendered as its <strong>decoded ASCII character</strong> — the <strong>24</strong> green letters/spaces spell the message reading; <strong>red ✕</strong> = the 4 out-of-range; <strong>gold</strong> = the 33 <code>pre_code ≠ 9</code> decoys.</em></figcaption>
+</figure>
 
 ```
 owl_sleeps_but_not_robin          ('_' = the space code, −15)
