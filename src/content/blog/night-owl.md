@@ -53,8 +53,8 @@ We are given a single file, **`lecture_capture.iq`**.
 ## 2. Parsing the capture
 
 ### lecture_capture.iq
-- `80,004,096` bytes = 4096‑byte
-  - `ICLKR` header + **80,000,000** bytes of IQ
+- `80,004,096` bytes
+  - **4,096** bytes `ICLKR` header + **80,000,000** bytes of IQ
   - payload = 10,000,000 `complex64` samples @ 500 kHz = **20 s** of RF at 917 MHz
 
 ### Header 
