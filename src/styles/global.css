@@ -1,26 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* Palette sampled from the nebula image —
-   black cosmic void, vivid orange dust, electric blue gas, warm starlight */
+/* Palette: cool monochrome night sky with cyan as the spot accent —
+   black cosmic void, cyan accent for highlights, warm starlight for body text */
 :root {
   --bg-deep: #050308;
   --bg-primary: #0a0510;
   --bg-card: rgba(14, 8, 18, 0.78);
   --bg-card-hover: rgba(28, 16, 32, 0.85);
   --bg-code: rgba(8, 4, 12, 0.92);
-  --border: rgba(255, 107, 42, 0.22);
-  --border-subtle: rgba(255, 107, 42, 0.10);
+  --border: rgba(125, 199, 245, 0.22);
+  --border-subtle: rgba(125, 199, 245, 0.10);
   --text-primary: #fff1dc;          /* warm bright starlight */
   --text-secondary: #d8b8a0;        /* dust-lit beige */
   --text-muted: #9a7b66;            /* faded warm */
-  --accent: #ff6b2a;                /* dominant nebula orange */
-  --accent-dim: rgba(255, 107, 42, 0.18);
-  --accent-strong: #ff8543;
+  --accent: #7dc7f5;                /* spot accent: ice cyan */
+  --accent-dim: rgba(125, 199, 245, 0.18);
+  --accent-strong: #9dd5ff;
   --accent-blue: #4a9eff;           /* electric blue gas */
   --accent-blue-dim: rgba(74, 158, 255, 0.16);
-  --highlight: rgba(255, 107, 42, 0.10);
+  --highlight: rgba(125, 199, 245, 0.10);
   --text-highlight: rgba(74, 158, 255, 0.35);
-  --accent-ink: #1a0a08;                         /* dark text that sits on an accent-colored background */
+  --accent-ink: #061018;                         /* dark text that sits on an accent-colored background */
   --status-warn: #ff9050;                        /* upcoming / warning badge foreground */
   --status-warn-dim: rgba(255, 144, 80, 0.12);
   --status-warn-border: rgba(255, 144, 80, 0.4);
@@ -71,11 +71,11 @@ nav a.is-current::after {
   border-radius: 2px;
 }
 
-/* Apply astronaut cursor at the highest level (html) so it's set even before
-   body CSS is fully parsed during page navigation */
+/* Default system cursor everywhere. Custom cursor PNGs removed in favor of
+   subtle hover glow on interactive elements (see below). */
 html,
 body {
-  cursor: url("/cursor-astronaut.png") 24 18, auto;
+  cursor: default;
 }
 
 body {
@@ -88,14 +88,7 @@ body {
   position: relative;
 }
 
-/* Keep the I-beam on text so users can still write/select normally */
-input,
-textarea,
-[contenteditable="true"] {
-  cursor: text;
-}
-
-/* Hover state on clickables — warm orange glow variant */
+/* Standard pointer on anything clickable (universal user expectation). */
 a,
 button,
 [role="button"],
@@ -103,10 +96,23 @@ summary,
 label,
 .post-card,
 .project-card {
-  cursor: url("/cursor-astronaut-hover.png") 24 18, pointer;
+  cursor: pointer;
 }
 
-/* No cursor change on click — feedback is handled by the blue ripple */
+/* Subtle hover glow — gentle "this is interactive" signal that doesn't
+   compete with per-component hover styles (cards already glow on their own). */
+a,
+button,
+[role="button"],
+summary {
+  transition: text-shadow 0.18s ease, color 0.18s ease;
+}
+a:hover,
+button:hover:not(:disabled),
+[role="button"]:hover,
+summary:hover {
+  text-shadow: 0 0 6px rgba(125, 199, 245, 0.35);
+}
 
 /* CSS star field disabled — using real nebula image background instead */
 body::before,
@@ -570,7 +576,7 @@ footer a:hover {
   border-color: var(--accent);
   transform: translateY(-2px);
   color: inherit;
-  box-shadow: 0 6px 24px rgba(255, 107, 42, 0.18);
+  box-shadow: 0 6px 24px rgba(125, 199, 245, 0.18);
 }
 .post-card-title {
   font-family: var(--font-header);
@@ -600,7 +606,7 @@ footer a:hover {
   padding: 3px 10px;
   background: var(--accent-dim);
   color: var(--accent-strong);
-  border: 1px solid rgba(255, 107, 42, 0.25);
+  border: 1px solid rgba(125, 199, 245, 0.25);
   border-radius: 4px;
   font-size: 0.78rem;
   font-weight: 500;
@@ -608,7 +614,7 @@ footer a:hover {
   transition: all 0.2s;
 }
 .tag:hover {
-  background: rgba(255, 107, 42, 0.28);
+  background: rgba(125, 199, 245, 0.28);
   color: #ffd0b0;
   border-color: var(--accent);
 }
@@ -657,7 +663,7 @@ footer a:hover {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 4px 24px rgba(255, 107, 42, 0.35));
+  filter: drop-shadow(0 4px 24px rgba(125, 199, 245, 0.35));
 }
 .hero-subtitle {
   font-size: 1.15rem;

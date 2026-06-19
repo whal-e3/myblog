@@ -183,4 +183,4 @@ flag    = bbb{owl_sleeps_but_not_robin}
 
 ## 9. Review
 
-I'm not sure whether the signal could be called **FHSS**. Since students use their own frequency channels, I think it's closer to FDMA (Frequency Division Multiple Access). But overall the challenge was fun to solve. Happy to see a RF challenge in such a big CTF.
+I'm not sure whether the signal could be called **FHSS**. If my solution is correct, since students use their own frequency channels, I think it's closer to FDMA (Frequency Division Multiple Access). I had to remove 'J' and 'I' just because they weren't fitting so maybe there's a better solution.

@@ -100,16 +100,16 @@ form{background:rgba(20,10,30,0.7);border:1px solid rgba(245,230,212,0.12);
 h1{font-size:1.3rem;font-weight:600;margin:0 0 6px;letter-spacing:-0.01em}
 .sub{color:#a89684;font-size:0.85rem;margin:0 0 28px;font-family:ui-monospace,monospace}
 label{display:block;font-family:ui-monospace,monospace;font-size:0.72rem;font-weight:600;
-  text-transform:uppercase;letter-spacing:0.12em;color:#ff6b2a;margin-bottom:8px}
+  text-transform:uppercase;letter-spacing:0.12em;color:#7dc7f5;margin-bottom:8px}
 input[type=password]{width:100%;box-sizing:border-box;padding:12px 14px;
   background:rgba(245,230,212,0.04);border:1px solid rgba(245,230,212,0.18);
   border-radius:8px;color:#f5e6d4;font-size:0.95rem;font-family:inherit;
   transition:border-color 0.15s}
-input[type=password]:focus{outline:none;border-color:#ff6b2a}
-button{width:100%;margin-top:18px;padding:12px;background:#ff6b2a;color:#0a0510;
+input[type=password]:focus{outline:none;border-color:#7dc7f5}
+button{width:100%;margin-top:18px;padding:12px;background:#7dc7f5;color:#0a0510;
   border:none;border-radius:8px;font-weight:600;font-size:0.95rem;cursor:pointer;
   transition:background 0.15s}
-button:hover{background:#ff7e44}
+button:hover{background:#9dd5ff}
 button:disabled{opacity:0.5;cursor:not-allowed}
 .msg{font-size:0.85rem;margin:0 0 14px;padding:10px 14px;border-radius:8px}
 .err{color:#ff6b6b;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3)}

@@ -30,22 +30,22 @@ function makeStars(seed: number, count: number, layer: Layer): Star[] {
   for (let i = 0; i < count; i++) {
     const r = rng();
     let color: string;
-    if (r < 0.65) {
-      // 65% red-ish — varied warm shades to feel natural
+    if (r < 0.80) {
+      // 80% white / pale-blue — matches the milky way background's natural
+      // star colors (cool whites dominate real night-sky photography)
       const sub = rng();
-      if (sub < 0.40) color = "#ff5e44";      // deep red
-      else if (sub < 0.70) color = "#ff7e54"; // orange-red
-      else if (sub < 0.88) color = "#ff5a78"; // pink-red
-      else color = "#ffa070";                  // warm orange
+      if (sub < 0.45) color = "#ffffff";      // pure white
+      else if (sub < 0.75) color = "#e8f0ff"; // very pale blue-white
+      else if (sub < 0.92) color = "#c8d8ff"; // cool blue-white
+      else color = "#a8c8ff";                  // ice blue
     } else if (r < 0.95) {
-      // 30% yellow → white
+      // 15% pale yellow — gives subtle warmth without breaking the cool palette
       const sub = rng();
-      if (sub < 0.45) color = "#ffe8a8";      // pale yellow
-      else if (sub < 0.80) color = "#fff5d8"; // yellow-white
-      else color = "#ffffff";                  // pure white
+      if (sub < 0.60) color = "#fff5d8";      // yellow-white
+      else color = "#ffe8a8";                  // pale yellow
     } else {
-      // 5% blue-ish
-      color = "#a8c8ff";
+      // 5% warm — tiny spark of orange/pink for variety, doesn't dominate
+      color = rng() < 0.5 ? "#ffa070" : "#ff7e54";
     }
 
     out.push({
