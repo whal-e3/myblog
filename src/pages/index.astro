@@ -55,6 +55,27 @@ const recent = [...allPosts]
   <section class="home-section">
     <h2 class="section-title">// Projects</h2>
     <div class="project-grid">
+      <a href="/projects" class="project-card">
+        <div class="project-thumb">
+          <img
+            src="/assets/content/project/xxxx_sat/cover.webp"
+            alt="xxxx-SAT — 7th CubeSat Competition poster"
+            width="1600"
+            height="700"
+            loading="eager"
+          />
+        </div>
+        <div class="project-body">
+          <h3 class="project-title">xxxx-SAT</h3>
+          <p class="project-tag">
+            Ground System Lead (RLE) for a CubeSat in the 7th Korean CubeSat
+            Competition. Designing the Mission Operations Center (MOC) that
+            communicates with the satellite.
+          </p>
+          <span class="project-badge badge-blue">KASA / KARI</span>
+        </div>
+      </a>
+
       <a href="/blog/mrradio" class="project-card">
         <div class="project-thumb">
           <img
@@ -169,7 +190,10 @@ const recent = [...allPosts]
   /* ── Featured Project cards ── */
   .project-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* auto-fit minmax lets the grid flow: 3 cards on wide screens, 2 on
+       medium, 1 on narrow — no fixed column count to maintain as cards
+       are added or removed. */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 18px;
   }
   .project-card {
