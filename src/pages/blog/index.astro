@@ -10,6 +10,20 @@ const posts = (await getCollection("blog"))
   .filter((p) => !p.data.publishDate || p.data.publishDate <= now)
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
+// Card cover: prefer explicit `cover` frontmatter; otherwise pull the first
+// image reference from the body — either markdown `![alt](url)` or an inline
+// `<img src="url">` HTML tag (some posts use <figure><img> for captions).
+// Returns null for posts with none.
+function coverFor(post: typeof posts[number]): string | null {
+  if (post.data.cover) return post.data.cover;
+  const body = post.body ?? "";
+  const md = body.match(/!\[[^\]]*\]\(([^)]+)\)/);
+  const html = body.match(/<img\s+[^>]*?src=["']([^"']+)["']/i);
+  const src = md?.[1] ?? html?.[1];
+  if (!src || src.startsWith("http")) return src ?? null;
+  return src.startsWith("/") ? src : `/${src}`;
+}
+
 // Collect every tag with count
 const tagCounts = new Map<string, number>();
 for (const p of posts) {
@@ -71,6 +85,7 @@ const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
               date={post.data.date}
               tags={post.data.tags}
               href={`/blog/${post.id}`}
+              cover={coverFor(post)}
             />
           </div>
         ))}

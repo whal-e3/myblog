@@ -5,9 +5,10 @@ interface Props {
   date: Date;
   tags: string[];
   href: string;
+  cover?: string | null;
 }
 
-const { title, description, date, tags, href } = Astro.props;
+const { title, description, date, tags, href, cover = null } = Astro.props;
 
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", {
@@ -18,17 +19,74 @@ function formatDate(d: Date) {
 }
 ---
 
-<a href={href} class="post-card">
-  <div class="post-card-title">{title}</div>
-  <div class="post-card-desc">{description}</div>
-  <div class="post-card-meta">
-    <time datetime={date.toISOString()}>{formatDate(date)}</time>
-    {tags.length > 0 && (
-      <div class="post-tags">
-        {tags.map((tag) => (
-          <span class="tag">{tag}</span>
-        ))}
-      </div>
-    )}
+<a href={href} class={`post-card ${cover ? "has-cover" : ""}`}>
+  {cover && (
+    <div class="post-card-cover">
+      <img src={cover} alt="" loading="lazy" />
+    </div>
+  )}
+  <div class="post-card-body">
+    <div class="post-card-title">{title}</div>
+    <div class="post-card-desc">{description}</div>
+    <div class="post-card-meta">
+      <time datetime={date.toISOString()}>{formatDate(date)}</time>
+      {tags.length > 0 && (
+        <div class="post-tags">
+          {tags.map((tag) => (
+            <span class="tag">{tag}</span>
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 </a>
+
+<style>
+  /* Two-column layout when a cover exists. Base .post-card lives in global.css
+     (display: block, padding: 24px) — we override to flex here. */
+  .post-card.has-cover {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .post-card-cover {
+    width: 160px;
+    flex-shrink: 0;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-subtle);
+  }
+  .post-card-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease;
+  }
+  .post-card.has-cover:hover .post-card-cover img {
+    transform: scale(1.04);
+  }
+  .post-card-body {
+    flex: 1 1 auto;
+    min-width: 0; /* prevents flex overflow when title/desc are long */
+    display: flex;
+    flex-direction: column;
+  }
+  /* Kill default margins on the last meta row so the card doesn't grow past
+     the cover height without needing to. */
+  .post-card.has-cover .post-card-desc {
+    margin-bottom: 10px;
+  }
+
+  @media (max-width: 640px) {
+    .post-card.has-cover {
+      gap: 12px;
+    }
+    .post-card-cover {
+      width: 112px;
+    }
+  }
+</style>
