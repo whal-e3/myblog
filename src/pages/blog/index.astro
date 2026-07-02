@@ -295,6 +295,10 @@ const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
 
 <script is:inline>
   (function () {
+    // Track the current outside-click handler so we can detach it on every
+    // re-init (SPA navigation replaces the DOM, so old refs go stale).
+    let outsideClickHandler = null;
+
     function init() {
       const search = document.getElementById("post-search");
       const dropdown = document.getElementById("tag-filter");
@@ -350,18 +354,23 @@ const allTags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
         });
       }
 
-      // Close dropdown when clicking outside
-      document.addEventListener("click", function (e) {
+      // Close dropdown when clicking outside. Detach the previous handler if
+      // this init is a re-init from SPA navigation, then attach the fresh one
+      // that references the new dropdown element.
+      if (outsideClickHandler) {
+        document.removeEventListener("click", outsideClickHandler);
+      }
+      outsideClickHandler = function (e) {
         if (!dropdown.contains(e.target)) dropdown.removeAttribute("open");
-      });
+      };
+      document.addEventListener("click", outsideClickHandler);
 
       apply();
     }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", init);
-    } else {
-      init();
-    }
+    // Fires on both the initial page load and every subsequent SPA navigation
+    // handled by <ClientRouter />. Replaces the older DOMContentLoaded-only
+    // setup that broke after the first navigation away and back.
+    document.addEventListener("astro:page-load", init);
   })();
 </script>
