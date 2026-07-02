@@ -44,8 +44,8 @@ function makeStars(seed: number, count: number, layer: Layer): Star[] {
       if (sub < 0.60) color = "#fff5d8";      // yellow-white
       else color = "#ffe8a8";                  // pale yellow
     } else {
-      // 5% warm — tiny spark of orange/pink for variety, doesn't dominate
-      color = rng() < 0.5 ? "#ffa070" : "#ff7e54";
+      // 5% brighter blue — saturated cool sparks for variety on the milky way bg
+      color = rng() < 0.5 ? "#5eb0e8" : "#4a9eff";
     }
 
     out.push({
