@@ -22,9 +22,13 @@ const recent = [...allPosts]
 <BaseLayout title="sunhyuk.dev" sidebar>
   <section class="hero">
     <h1 class="hero-title">SunHyuk Hwang</h1>
-    <p class="hero-subtitle">
-      Satellite Security Researcher.<br />
-      Hacking, space, and AI.
+    <p
+      class="hero-rotator"
+      aria-label="Satellite security, satellite hacking, security research, flight and ground systems, wireless and RF"
+    >
+      <span class="rotator-text" data-rotator aria-hidden="true"></span><span
+        class="rotator-caret"
+        aria-hidden="true"></span>
     </p>
     <div class="hero-links">
       <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
@@ -143,9 +147,123 @@ const recent = [...allPosts]
   <Sidebar slot="sidebar" />
 </BaseLayout>
 
+<script is:inline>
+  (function () {
+    var KEYWORDS = [
+      "Satellite security",
+      "Satellite hacking",
+      "Security research",
+      "Flight & ground systems",
+      "Wireless & RF",
+    ];
+    // Held across SPA navigations so a stale animation is cancelled on re-init.
+    var timer = null;
+
+    function start() {
+      var el = document.querySelector("[data-rotator]");
+      if (!el) return;
+
+      if (timer) { clearTimeout(timer); clearInterval(timer); timer = null; }
+
+      var reduce =
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) {
+        // Motion-sensitive users: skip the per-character typing but still cycle
+        // the keywords with a plain swap so the line doesn't look frozen.
+        var ri = 0;
+        el.textContent = KEYWORDS[ri];
+        timer = setInterval(function () {
+          ri = (ri + 1) % KEYWORDS.length;
+          el.textContent = KEYWORDS[ri];
+        }, 2600);
+        return;
+      }
+
+      var i = 0;         // current keyword
+      var pos = 0;       // characters shown
+      var deleting = false;
+      var TYPE = 65;     // ms per typed char
+      var ERASE = 35;    // ms per erased char
+      var HOLD = 1500;   // pause at full word
+      var GAP = 350;     // pause before next word
+
+      function tick() {
+        var word = KEYWORDS[i];
+        if (!deleting) {
+          pos++;
+          el.textContent = word.slice(0, pos);
+          if (pos === word.length) {
+            deleting = true;
+            timer = setTimeout(tick, HOLD);
+            return;
+          }
+          timer = setTimeout(tick, TYPE);
+        } else {
+          pos--;
+          el.textContent = word.slice(0, pos);
+          if (pos === 0) {
+            deleting = false;
+            i = (i + 1) % KEYWORDS.length;
+            timer = setTimeout(tick, GAP);
+            return;
+          }
+          timer = setTimeout(tick, ERASE);
+        }
+      }
+      tick();
+    }
+
+    // Fires on first load and every <ClientRouter /> SPA navigation.
+    document.addEventListener("astro:page-load", start);
+  })();
+</script>
+
 <style>
   .home-section {
     margin-bottom: 48px;
+  }
+
+  /* ── Hero rotating keyword ── */
+  .hero-rotator {
+    font-family: var(--font-header);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 auto 40px;
+    /* Reserve the line height so typing/erasing doesn't shift layout. */
+    min-height: 1.6em;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rotator-text {
+    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .rotator-caret {
+    display: inline-block;
+    width: 3px;
+    height: 1.15em;
+    margin-left: 4px;
+    background: var(--accent);
+    animation: rotator-blink 1s steps(1) infinite;
+  }
+  @keyframes rotator-blink {
+    0%, 50% { opacity: 1; }
+    50.01%, 100% { opacity: 0; }
+  }
+  /* Respect reduced-motion: stop the caret blink; the JS also skips typing. */
+  @media (prefers-reduced-motion: reduce) {
+    .rotator-caret { animation: none; opacity: 0.7; }
+  }
+  @media (max-width: 640px) {
+    .hero-rotator { font-size: 1.2rem; }
   }
 
   /* ── Currently card ── */
