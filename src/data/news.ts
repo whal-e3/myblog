@@ -9,7 +9,7 @@ export interface NewsItem {
 export const news: NewsItem[] = [
   {
     date: "2026-07-02",
-    text: "VSA (Virtual Satellite Antenna) will be featured at DEF CON 2026 Aerospace Village — Aug 6–9, Las Vegas Convention Center (West Hall).",
+    text: "Heading to DEF CON 2026 Aerospace Village — Aug 6–9, Las Vegas Convention Center (West Hall) — running a booth with 4 hands-on satellite-hacking scenarios/challenges I built on VSA.",
   },
   {
     date: "2026-04-22",
