@@ -29,7 +29,11 @@ function formatShort(d: Date) {
     <div class="about-card">
       <p class="about-name">SunHyuk Hwang</p>
       <p class="about-role">Satellite RF security researcher.</p>
-      <p class="about-tag">Hacking · Space · AI</p>
+      <p class="about-affil">
+        M.S. @ Kyung Hee University ·
+        <a href="https://pwnlab.kr/" target="_blank" rel="noopener">PWNLAB</a>
+      </p>
+      <p class="about-tag">Hacking · Space · RF</p>
       <a href="/cv" class="about-link">Read CV →</a>
     </div>
   </section>
@@ -155,8 +159,20 @@ function formatShort(d: Date) {
   .about-role {
     color: var(--text-secondary);
     font-size: 0.88rem;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     line-height: 1.5;
+  }
+  .about-affil {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+  .about-affil a {
+    color: var(--accent);
+  }
+  .about-affil a:hover {
+    color: var(--accent-strong);
   }
   .about-tag {
     color: var(--text-muted);
