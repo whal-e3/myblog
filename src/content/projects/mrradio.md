@@ -14,5 +14,5 @@ posts:
 
 An RF hacking wargame platform with fully virtualized satellite signal environments — receive, demodulate, and decode satellite signals through a browser. Includes antenna selection and direction adjustment.
 
-The only RF CTF platform offering this level of signal virtualization. Currently 16 challenges live, ranging from FM radio identification to satellite signal eavesdropping.
+The only RF CTF platform offering this level of signal virtualization. Currently 22 challenges live, ranging from FM radio identification to satellite signal eavesdropping.
 
