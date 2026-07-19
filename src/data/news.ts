@@ -9,7 +9,7 @@ export interface NewsItem {
 export const news: NewsItem[] = [
   {
     date: "2026-07-02",
-    text: "Heading to DEF CON 2026 Aerospace Village — Aug 6–9, Las Vegas Convention Center (West Hall) — running a booth with 4 hands-on satellite-hacking scenarios/challenges I built on VSA.",
+    text: "Heading to DEF CON 2026 Aerospace Village — Aug 6–9, Las Vegas Convention Center (West Hall). I helped build 4 hands-on satellite-hacking scenarios on OpenVSA (my open-source satellite ground station), and as its author I'll be there to help anyone who wants to try them.",
   },
   {
     date: "2026-04-22",
