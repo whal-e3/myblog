@@ -22,38 +22,42 @@ const recent = [...allPosts]
 <BaseLayout title="sunhyuk.dev" sidebar>
   <section class="hero">
     <h1 class="hero-title">SunHyuk Hwang</h1>
-    <p
-      class="hero-rotator"
-      aria-label="Satellite security, satellite hacking, security research, flight and ground systems, wireless and RF"
-    >
-      <span class="rotator-text" data-rotator aria-hidden="true"></span><span
-        class="rotator-caret"
-        aria-hidden="true"></span>
-    </p>
+    <p class="hero-focus">I'm a space security researcher focused on satellites — their RF links, protocols, and software — and on making that security research hands-on and open rather than hardware-gated.</p>
     <div class="hero-links">
-      <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
-      <a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a>
-      <a href="mailto:ericwhale0@gmail.com">Email</a>
+      <a href="mailto:ericwhale0@gmail.com" class="hero-contact">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+          <path d="m22 7-10 5L2 7"></path>
+        </svg>
+        <span>Contact</span>
+      </a>
     </div>
   </section>
 
-  {/* ── Recent posts ── */}
-  {recent.length > 0 && (
-    <section class="home-section">
-      <h2 class="section-title">// Recent posts</h2>
-      <div class="post-list">
-        {recent.map((post) => (
-          <PostCard
-            title={post.data.title}
-            description={post.data.description}
-            date={post.data.date}
-            tags={post.data.tags}
-            href={`/blog/${post.id}`}
-          />
-        ))}
+  {/* ── Research / About ── */}
+  <section class="home-section">
+    <h2 class="section-title">// Research</h2>
+    <div class="research-card">
+      <div class="research-cols">
+        <div class="research-block">
+          <h3 class="research-label">Interests</h3>
+          <ul class="research-list">
+            <li>Satellite RF &amp; protocol security</li>
+            <li>Ground-segment and flight software security</li>
+            <li>Tooling &amp; simulation that lowers the barrier to space-systems research</li>
+          </ul>
+        </div>
+        <div class="research-block">
+          <h3 class="research-label">Currently</h3>
+          <p class="research-currently">
+            Ground System Lead in the KHU team for a KARI-hosted CubeSat
+            competition; adding new challenges to
+            <a href="https://mrradio.kr" target="_blank" rel="noopener">Mr.Radio</a>.
+          </p>
+        </div>
       </div>
-    </section>
-  )}
+    </div>
+  </section>
 
   {/* ── Featured Projects ── */}
   <section class="home-section">
@@ -124,6 +128,24 @@ const recent = [...allPosts]
     </div>
   </section>
 
+  {/* ── Recent posts ── */}
+  {recent.length > 0 && (
+    <section class="home-section">
+      <h2 class="section-title">// Recent posts</h2>
+      <div class="post-list">
+        {recent.map((post) => (
+          <PostCard
+            title={post.data.title}
+            description={post.data.description}
+            date={post.data.date}
+            tags={post.data.tags}
+            href={`/blog/${post.id}`}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+
   {/* ── Starred posts ── */}
   {starred.length > 0 && (
     <section class="home-section">
@@ -147,123 +169,68 @@ const recent = [...allPosts]
   <Sidebar slot="sidebar" />
 </BaseLayout>
 
-<script is:inline>
-  (function () {
-    var KEYWORDS = [
-      "Satellite security",
-      "Satellite hacking",
-      "Security research",
-      "Flight & ground systems",
-      "Wireless & RF",
-    ];
-    // Held across SPA navigations so a stale animation is cancelled on re-init.
-    var timer = null;
-
-    function start() {
-      var el = document.querySelector("[data-rotator]");
-      if (!el) return;
-
-      if (timer) { clearTimeout(timer); clearInterval(timer); timer = null; }
-
-      var reduce =
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduce) {
-        // Motion-sensitive users: skip the per-character typing but still cycle
-        // the keywords with a plain swap so the line doesn't look frozen.
-        var ri = 0;
-        el.textContent = KEYWORDS[ri];
-        timer = setInterval(function () {
-          ri = (ri + 1) % KEYWORDS.length;
-          el.textContent = KEYWORDS[ri];
-        }, 2600);
-        return;
-      }
-
-      var i = 0;         // current keyword
-      var pos = 0;       // characters shown
-      var deleting = false;
-      var TYPE = 65;     // ms per typed char
-      var ERASE = 35;    // ms per erased char
-      var HOLD = 1500;   // pause at full word
-      var GAP = 350;     // pause before next word
-
-      function tick() {
-        var word = KEYWORDS[i];
-        if (!deleting) {
-          pos++;
-          el.textContent = word.slice(0, pos);
-          if (pos === word.length) {
-            deleting = true;
-            timer = setTimeout(tick, HOLD);
-            return;
-          }
-          timer = setTimeout(tick, TYPE);
-        } else {
-          pos--;
-          el.textContent = word.slice(0, pos);
-          if (pos === 0) {
-            deleting = false;
-            i = (i + 1) % KEYWORDS.length;
-            timer = setTimeout(tick, GAP);
-            return;
-          }
-          timer = setTimeout(tick, ERASE);
-        }
-      }
-      tick();
-    }
-
-    // Fires on first load and every <ClientRouter /> SPA navigation.
-    document.addEventListener("astro:page-load", start);
-  })();
-</script>
-
 <style>
   .home-section {
     margin-bottom: 48px;
   }
 
-  /* ── Hero rotating keyword ── */
-  .hero-rotator {
-    font-family: var(--font-header);
-    font-size: 1.5rem;
-    font-weight: 600;
+  /* ── Research / About card ── */
+  .research-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  }
+  .research-intro {
     color: var(--text-primary);
-    margin: 0 auto 40px;
-    /* Reserve the line height so typing/erasing doesn't shift layout. */
-    min-height: 1.6em;
-    line-height: 1.6;
-    letter-spacing: -0.01em;
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+    font-size: 1.02rem;
+    line-height: 1.7;
+    margin-bottom: 22px;
+  }
+  .research-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+  .research-label {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .research-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    gap: 8px;
   }
-  .rotator-text {
-    background: linear-gradient(120deg, var(--accent) 0%, var(--accent-blue) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .research-list li {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    padding-left: 14px;
+    position: relative;
   }
-  .rotator-caret {
-    display: inline-block;
-    width: 3px;
-    height: 1.15em;
-    margin-left: 4px;
-    background: var(--accent);
-    animation: rotator-blink 1s steps(1) infinite;
+  .research-list li::before {
+    content: "·";
+    color: var(--accent);
+    position: absolute;
+    left: 0;
+    font-weight: 700;
   }
-  @keyframes rotator-blink {
-    0%, 50% { opacity: 1; }
-    50.01%, 100% { opacity: 0; }
-  }
-  /* Respect reduced-motion: stop the caret blink; the JS also skips typing. */
-  @media (prefers-reduced-motion: reduce) {
-    .rotator-caret { animation: none; opacity: 0.7; }
+  .research-currently {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.65;
   }
   @media (max-width: 640px) {
-    .hero-rotator { font-size: 1.2rem; }
+    .research-cols { grid-template-columns: 1fr; gap: 20px; }
   }
 
   /* ── Currently card ── */
@@ -343,11 +310,15 @@ const recent = [...allPosts]
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: transform 0.4s ease;
+    /* Slightly muted by default so bright media sits calmly on the dark page;
+       returns to full color + subtle zoom on hover. Keeps the cards unified. */
+    filter: brightness(0.85) saturate(0.88);
+    transition: transform 0.4s ease, filter 0.3s ease;
   }
   .project-card:hover .project-thumb img,
   .project-card:hover .project-thumb video {
     transform: scale(1.04);
+    filter: brightness(1) saturate(1);
   }
   .project-body {
     padding: 16px 18px 18px;
