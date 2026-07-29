@@ -88,11 +88,18 @@ const isCurrent = (href: string) =>
       </main>
       <footer>
         <div class="container">
-          <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
-          &nbsp;·&nbsp;
-          <a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a>
-          &nbsp;·&nbsp;
-          <a href="mailto:ericwhale0@gmail.com">Email</a>
+          <div class="footer-links">
+            <a href="https://github.com/whal-e3" target="_blank" rel="noopener">GitHub</a>
+            &nbsp;·&nbsp;
+            <a href="https://x.com/whal_3" target="_blank" rel="noopener">X</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:ericwhale0@gmail.com">Email</a>
+          </div>
+          <p class="footer-copyright">
+            © 2026 SunHyuk Hwang. All rights reserved. No content herein may be
+            reproduced, distributed, or transmitted in any form without the prior
+            written consent of the copyright holder.
+          </p>
         </div>
       </footer>
     </div>
@@ -114,19 +121,6 @@ const isCurrent = (href: string) =>
     if (e.key === "Escape" && document.body.classList.contains("sidebar-open")) {
       closeDrawer();
     }
-  });
-
-  // Click ripple — blue glow at click location
-  const CLICK_TARGETS = 'a, button, [role="button"], summary, label, .post-card, .project-card';
-  document.addEventListener("mousedown", (e) => {
-    const me = e as MouseEvent;
-    if (!(me.target as Element).closest?.(CLICK_TARGETS)) return;
-    const ripple = document.createElement("span");
-    ripple.className = "click-ripple";
-    ripple.style.left = me.clientX + "px";
-    ripple.style.top = me.clientY + "px";
-    document.body.appendChild(ripple);
-    ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
   });
 
   // ── Element-specific listeners — re-register on every SPA page-load ──

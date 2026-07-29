@@ -99,48 +99,25 @@ label,
   cursor: pointer;
 }
 
-/* Subtle hover glow — gentle "this is interactive" signal that doesn't
-   compete with per-component hover styles (cards already glow on their own). */
+/* Interactive elements shift to the accent color on hover — a calm, standard
+   signal (no glow/text-shadow, which read as flashy). */
 a,
 button,
 [role="button"],
 summary {
-  transition: text-shadow 0.18s ease, color 0.18s ease;
+  transition: color 0.15s ease;
 }
 a:hover,
 button:hover:not(:disabled),
 [role="button"]:hover,
 summary:hover {
-  text-shadow: 0 0 6px rgba(125, 199, 245, 0.35);
+  color: var(--accent);
 }
 
 /* CSS star field disabled — using real nebula image background instead */
 body::before,
 body::after {
   content: none;
-}
-
-/* ── Click ripple effect — blue glow at click position ── */
-.click-ripple {
-  position: fixed;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    rgba(80, 170, 255, 0.75) 0%,
-    rgba(80, 170, 255, 0.35) 35%,
-    rgba(80, 170, 255, 0) 70%);
-  pointer-events: none;
-  transform: translate(-50%, -50%) scale(0);
-  z-index: 9999;
-  animation: click-ripple-expand 500ms cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
-  will-change: transform, opacity;
-  mix-blend-mode: screen;
-}
-
-@keyframes click-ripple-expand {
-  0%   { transform: translate(-50%, -50%) scale(0);   opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
 }
 
 /* Dense tiny background stars (tiled 200x200, ~40 stars per tile) */
@@ -406,7 +383,7 @@ header .container {
 
 .site-title {
   font-family: var(--font-header);
-  font-size: 1.15rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -422,7 +399,7 @@ nav {
 nav a {
   font-family: var(--font-header);
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -451,6 +428,15 @@ footer a {
 }
 footer a:hover {
   color: var(--accent);
+}
+.footer-copyright {
+  margin-top: 12px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--text-muted);
 }
 
 /* ── Prose (blog post content) ── */
@@ -672,18 +658,25 @@ footer a:hover {
   font-weight: 700;
   letter-spacing: -0.04em;
   margin-bottom: 18px;
-  background: linear-gradient(135deg, #fff5e8 0%, var(--accent) 55%, var(--accent-blue) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 4px 24px rgba(125, 199, 245, 0.35));
+  color: var(--text-primary);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.6);
 }
 .hero-subtitle {
   font-size: 1.15rem;
   color: var(--text-primary);
   max-width: 500px;
-  margin: 0 auto 40px;
+  margin: 0 auto 6px;
   line-height: 1.6;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+/* Second hero line — the concrete focus areas, muted so it reads as a
+   sub-line under the role. */
+.hero-focus {
+  font-size: 0.98rem;
+  color: var(--text-secondary);
+  max-width: 620px;
+  margin: 0 auto 40px;
+  line-height: 1.5;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
 }
 .hero-links {
@@ -691,16 +684,27 @@ footer a:hover {
   justify-content: center;
   gap: 24px;
 }
-.hero-links a {
-  font-family: var(--font-header);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-.hero-links a:hover {
+/* Contact CTA — a bordered pill, distinct from plain nav links. */
+.hero-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(125, 199, 245, 0.4);
+  padding: 9px 20px;
+  border-radius: 8px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.hero-contact svg { flex-shrink: 0; }
+.hero-contact:hover {
+  color: var(--accent-strong);
+  background: rgba(125, 199, 245, 0.18);
+  border-color: var(--accent);
 }
 
 /* ── Section headings ── */

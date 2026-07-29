@@ -1,92 +1,14 @@
 ---
-// Fullscreen nebula background + parallax star field.
-//
-// The star field is drawn on a <canvas> with requestAnimationFrame rather than
-// animated CSS layers. CSS transform-animating three 200vw-wide layers turned
-// out to be smooth in Chrome but badly janky in Firefox — Firefox can't keep
-// such large elements on the GPU compositor and repaints them. A canvas
-// sidesteps the compositor entirely: the browser just blits one bitmap per
-// frame, which is fast and consistent across browsers. Drawing ~173 dots per
-// frame is a trivial CPU load.
-
-type Star = { x: number; y: number; size: number; color: string };
-
-function rand(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    return s / 0x100000000;
-  };
-}
-
-type Layer = "near" | "mid" | "far";
-
-function makeStars(seed: number, count: number, layer: Layer): Star[] {
-  const rng = rand(seed);
-  const out: Star[] = [];
-  // Per-layer size profile (max diameter capped at 3)
-  const profile = {
-    near: { sizeMin: 2.0, sizeMax: 3.0 },
-    mid:  { sizeMin: 1.3, sizeMax: 2.0 },
-    far:  { sizeMin: 0.7, sizeMax: 1.3 },
-  }[layer];
-
-  for (let i = 0; i < count; i++) {
-    const r = rng();
-    let color: string;
-    if (r < 0.80) {
-      // 80% white / pale-blue — matches the milky way background's natural
-      // star colors (cool whites dominate real night-sky photography)
-      const sub = rng();
-      if (sub < 0.45) color = "#ffffff";      // pure white
-      else if (sub < 0.75) color = "#e8f0ff"; // very pale blue-white
-      else if (sub < 0.92) color = "#c8d8ff"; // cool blue-white
-      else color = "#a8c8ff";                  // ice blue
-    } else if (r < 0.95) {
-      // 15% pale yellow — subtle warmth without breaking the cool palette
-      const sub = rng();
-      if (sub < 0.60) color = "#fff5d8";      // yellow-white
-      else color = "#ffe8a8";                  // pale yellow
-    } else {
-      // 5% brighter blue — saturated cool sparks for variety
-      color = rng() < 0.5 ? "#5eb0e8" : "#4a9eff";
-    }
-
-    out.push({
-      x: rng() * 100,   // percent across viewport
-      y: rng() * 100,   // percent down viewport
-      size: profile.sizeMin + rng() * (profile.sizeMax - profile.sizeMin),
-      color,
-    });
-  }
-  return out;
-}
-
-// Three parallax layers. `dur` = seconds to drift one viewport width; smaller
-// = faster (near layer fastest). `opacity` dims the deeper layers.
-const layerData = [
-  { dur: 720, opacity: 0.55, stars: makeStars(11111, 90, "far") },
-  { dur: 380, opacity: 0.78, stars: makeStars(22222, 55, "mid") },
-  { dur: 200, opacity: 1.0,  stars: makeStars(33333, 28, "near") },
-].map((l) => ({
-  dur: l.dur,
-  opacity: l.opacity,
-  stars: l.stars.map((s) => ({
-    x: +s.x.toFixed(2),
-    y: +s.y.toFixed(2),
-    r: +(s.size / 2).toFixed(2),
-    c: s.color,
-  })),
-}));
+// Fullscreen nebula background — completely static. The image is fixed, so it
+// stays put while the page content scrolls (no motion at all). Earlier drifting
+// stars and a scroll parallax were both removed because the movement was
+// distracting / could cause motion discomfort.
 ---
 
 <div class="space-bg" aria-hidden="true">
   <img class="space-img" src="/assets/space-bg.webp" alt="" />
 </div>
 <div class="space-overlay" aria-hidden="true"></div>
-<canvas id="star-canvas" class="star-canvas" aria-hidden="true"></canvas>
-<script type="application/json" id="star-layers" set:html={JSON.stringify(layerData)}
-></script>
 
 <style>
   .space-bg {
@@ -97,7 +19,6 @@ const layerData = [
     overflow: hidden;
   }
 
-  /* Background image stays still */
   .space-img {
     position: absolute;
     top: 0;
@@ -107,121 +28,17 @@ const layerData = [
     object-fit: cover;
   }
 
+  /* Heavy dark veil: the photo sinks to a subtle deep-space texture so text
+     sits on a near-solid dark background (clean, readable). */
   .space-overlay {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
     background:
-      radial-gradient(ellipse 85% 75% at center,
-        rgba(5, 3, 8, 0.55) 0%,
-        rgba(5, 3, 8, 0.40) 60%,
-        rgba(5, 3, 8, 0.25) 100%);
-  }
-
-  .star-canvas {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-    width: 100vw;
-    height: 100vh;
-    display: block;
+      radial-gradient(ellipse 90% 80% at center,
+        rgba(5, 3, 8, 0.68) 0%,
+        rgba(5, 3, 8, 0.76) 55%,
+        rgba(5, 3, 8, 0.85) 100%);
   }
 </style>
-
-<script is:inline>
-  (function () {
-    // Kept across SPA navigations so a stale loop/listeners are torn down.
-    var rafId = null;
-    var onResize = null;
-    var onVisibility = null;
-
-    function init() {
-      var canvas = document.getElementById("star-canvas");
-      var dataEl = document.getElementById("star-layers");
-      if (!canvas || !dataEl) return;
-
-      // Tear down any previous run (ClientRouter re-runs this on each page).
-      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-      if (onResize) { window.removeEventListener("resize", onResize); }
-      if (onVisibility) { document.removeEventListener("visibilitychange", onVisibility); }
-
-      var layers;
-      try { layers = JSON.parse(dataEl.textContent); } catch (e) { return; }
-
-      var ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      // Cap DPR at 2 — beyond that the buffer gets huge for no visible gain.
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
-      var W = 0, H = 0;
-
-      function resize() {
-        W = window.innerWidth;
-        H = window.innerHeight;
-        canvas.width = Math.floor(W * dpr);
-        canvas.height = Math.floor(H * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-      resize();
-
-      var reduce =
-        window.matchMedia &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      var TWO_PI = Math.PI * 2;
-
-      function draw(elapsedSec) {
-        ctx.clearRect(0, 0, W, H);
-        for (var li = 0; li < layers.length; li++) {
-          var layer = layers[li];
-          var speed = W / layer.dur;          // px/sec, drifting left
-          var shift = (elapsedSec * speed) % W;
-          ctx.globalAlpha = layer.opacity;
-          var stars = layer.stars;
-          for (var i = 0; i < stars.length; i++) {
-            var s = stars[i];
-            var x = (s.x / 100) * W - shift;
-            if (x < 0) x += W;                 // wrap into [0, W)
-            var y = (s.y / 100) * H;
-            ctx.beginPath();
-            ctx.fillStyle = s.c;
-            ctx.arc(x, y, s.r, 0, TWO_PI);
-            ctx.fill();
-          }
-        }
-        ctx.globalAlpha = 1;
-      }
-
-      onResize = function () { resize(); if (reduce) draw(0); };
-      window.addEventListener("resize", onResize);
-
-      if (reduce) {
-        // Motion-sensitive users: draw the field once, no animation loop.
-        draw(0);
-        return;
-      }
-
-      var startTs = null;
-      function frame(ts) {
-        if (startTs === null) startTs = ts;
-        draw((ts - startTs) / 1000);
-        rafId = requestAnimationFrame(frame);
-      }
-      rafId = requestAnimationFrame(frame);
-
-      // Pause the loop when the tab isn't visible (saves CPU/battery).
-      onVisibility = function () {
-        if (document.hidden) {
-          if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-        } else if (!rafId) {
-          startTs = null;
-          rafId = requestAnimationFrame(frame);
-        }
-      };
-      document.addEventListener("visibilitychange", onVisibility);
-    }
-
-    document.addEventListener("astro:page-load", init);
-  })();
-</script>
