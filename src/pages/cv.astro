@@ -45,6 +45,20 @@ import Sidebar from "../components/Sidebar.astro";
       */}
     </div>
 
+    {/* ── Research Interests ── */}
+    <div class="cv-section">
+      <h2>// Research Interests</h2>
+      <p>
+        I work on the security of satellite systems, with a current focus on the
+        RF and communication-protocol layer — signal reception, protocol
+        analysis, and exploitation. A through-line in my work is building open
+        tools and simulators that make this research hands-on and reproducible
+        without specialized hardware. I aim to extend this from the RF link into
+        the software that runs spacecraft — onboard flight and ground-segment
+        systems.
+      </p>
+    </div>
+
     {/* ── Education ── */}
     <div class="cv-section">
       <h2>// Education</h2>
@@ -55,14 +69,17 @@ import Sidebar from "../components/Sidebar.astro";
           <span class="cv-date">Mar 2025 – Feb 2027 (expected)</span>
         </div>
         <ul>
-          <li>GPA: 4.17/4.3 (in progress)</li>
           <li>
             Graduate researcher,
             <a href="https://pwnlab.kr/" target="_blank" rel="noopener">PWNLAB</a>
             cybersecurity research lab (2025 – present)
           </li>
-          <li>Thesis: <em>TBD</em></li>
           <li>Research focus: Satellite communication security</li>
+          <li>GPA: 4.17/4.3 (in progress)</li>
+          <li>
+            Thesis: <em>A Study on the Design of a Virtual Satellite Antenna
+            (VSA) System for Satellite RF Hacking Research</em> (TBD)
+          </li>
         </ul>
       </div>
 
@@ -76,20 +93,6 @@ import Sidebar from "../components/Sidebar.astro";
           <li>Research focus: Drone security</li>
         </ul>
       </div>
-    </div>
-
-    {/* ── Research Interests ── */}
-    <div class="cv-section">
-      <h2>// Research Interests</h2>
-      <p>
-        Space and satellite security. Currently focused on the RF layer —
-        satellite communication-protocol analysis and exploitation, with
-        hands-on experience operating real satellite antennas. Broader
-        interests include satellite firmware / onboard-software security
-        (cFS, NOS3-simulated systems) and hardware-level attack surfaces,
-        supported by firmware reverse engineering and embedded-hardware
-        experience.
-      </p>
     </div>
 
     {/* ── Publications ── */}
@@ -134,64 +137,71 @@ import Sidebar from "../components/Sidebar.astro";
           Conference on Information Security and Cryptography — Winter
           (CISC-W'23), Dec 2023.
         </li>
-        <li>
-          <strong>"A Practical Tool for Analyzing Security Threats in Satellite Communications."</strong>
-          Co-authored with an undergraduate researcher under my mentorship. ·
-          <a
-            class="paper-link"
-            href="https://scholar.google.com/citations?view_op=view_citation&amp;hl=ko&amp;user=6q1BWbYAAAAJ&amp;citation_for_view=6q1BWbYAAAAJ:UeHWp8X0CEIC"
-            target="_blank"
-            rel="noopener"
-          >view on Google Scholar ↗</a>
-        </li>
       </ol>
     </div>
 
-    {/* ── Experience ── */}
+    {/* ── Research Experience ── */}
     <div class="cv-section">
-      <h2>// Experience</h2>
+      <h2>// Research Experience</h2>
 
       <div class="cv-project">
         <div class="cv-entry-head">
           <h3>Graduate Researcher — Satellite Cybersecurity</h3>
           <span class="cv-date">Mar 2025 – present</span>
         </div>
-        <p class="cv-org">IERAE · Korean government research institute</p>
+        <p class="cv-org">PWNLAB, Kyung Hee University</p>
         <ul>
           <li>
-            Designing <em>VSA</em> (<a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>),
-            a virtualized satellite ground-station / antenna system for
-            satellite RF security research.
+            Research on the RF and protocol layer of satellite security —
+            operating real and virtualized ground stations to study signal
+            reception, tracking, and exploitation.
           </li>
           <li>
-            Building
-            <a href="https://mrradio.kr/" target="_blank" rel="noopener">Mr.Radio</a>,
-            a RF-hacking wargame platform for satellite RF security education.
+            Creator of
+            <a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>
+            and
+            <a href="https://mrradio.kr/" target="_blank" rel="noopener">Mr.Radio</a>
+            (detailed under Selected Projects) — open tools that make satellite
+            RF security research and education hands-on.
           </li>
         </ul>
       </div>
 
       <div class="cv-project">
         <div class="cv-entry-head">
-          <h3>Ground System Lead (RLE) — xxxx-SAT CubeSat</h3>
+          <h3>Ground System Lead (RLE) — KARI-hosted CubeSat competition</h3>
           <span class="cv-date">Jun 2026 – present</span>
         </div>
         <p class="cv-org">
-          <a href="https://www.kari.re.kr/kor/article/ATCL90a22172e/18676" target="_blank" rel="noopener">7th CubeSat Competition</a>
-          · Korea AeroSpace Administration (KASA) / Korea Aerospace Research Institute (KARI)
+          KHU team ·
+          <a href="https://www.kari.re.kr/kor/article/ATCL90a22172e/18676" target="_blank" rel="noopener">7th Korean CubeSat Competition</a>
+          (KASA / KARI)
         </p>
         <ul>
           <li>
-            Design the ground-system Mission Operations Center (MOC) that
-            communicates with the satellite.
-          </li>
-          <li>
-            Project name, architecture, satellite specifications, and team
-            composition intentionally omitted while the competition is in
-            progress.
+            Lead the ground-system software segment; designing the Mission
+            Operations Center (MOC) that commands the satellite and processes
+            its telemetry and mission data.
           </li>
         </ul>
       </div>
+
+      <div class="cv-project">
+        <div class="cv-entry-head">
+          <h3>Researcher — Satellite Cybersecurity R&amp;D Project</h3>
+          <span class="cv-date">2024 – 2025</span>
+        </div>
+        <p class="cv-org">Korean government research institutes</p>
+        <ul>
+          <li>Government-funded defense satellite security research.</li>
+          <li>Technical details and deliverables restricted under NDA.</li>
+        </ul>
+      </div>
+    </div>
+
+    {/* ── Teaching Experience ── */}
+    <div class="cv-section">
+      <h2>// Teaching Experience</h2>
 
       <div class="cv-project">
         <div class="cv-entry-head">
@@ -201,9 +211,8 @@ import Sidebar from "../components/Sidebar.astro";
         <p class="cv-org">Kyung Hee University · Instructor: Prof. Dae-Hee Jang</p>
         <ul>
           <li>
-            Led two hands-on RF-hacking lab sessions for the undergraduate
-            Information Security course, covering RF attack fundamentals
-            and practical signal exploitation.
+            Led two hands-on RF-hacking lab sessions covering RF attack
+            fundamentals and practical signal exploitation.
           </li>
         </ul>
       </div>
@@ -221,39 +230,36 @@ import Sidebar from "../components/Sidebar.astro";
           </li>
         </ul>
       </div>
+    </div>
+
+    {/* ── Talks & Demonstrations ── */}
+    <div class="cv-section">
+      <h2>// Talks &amp; Demonstrations</h2>
 
       <div class="cv-project">
         <div class="cv-entry-head">
-          <h3>Researcher — Satellite Cybersecurity R&amp;D Project</h3>
-          <span class="cv-date">2024 – 2025</span>
+          <h3>DEF CON 2026 Aerospace Village</h3>
+          <span class="cv-date">Aug 2026</span>
         </div>
-        <p class="cv-org">Korean government research institutes</p>
-        <ul>
-          <li>Government-funded defense satellite security research.</li>
-          <li>
-            Delivered invited talk — RF security research overview — at a
-            Korean government research institute in Daejeon (Feb 2024).
-          </li>
-          <li>Technical details and deliverables restricted under NDA.</li>
-        </ul>
+        <p>
+          Co-developed and present hands-on satellite-hacking scenarios built on
+          OpenVSA, in collaboration with IERAE, for visitors at the Aerospace
+          Village, Las Vegas, NV, USA.
+        </p>
       </div>
 
       <div class="cv-project">
         <div class="cv-entry-head">
-          <h3>Contributing Researcher — Drone Security</h3>
-          <span class="cv-date">Apr 2023 – Dec 2023</span>
+          <h3>Invited talk — RF security research overview</h3>
+          <span class="cv-date">Feb 2024</span>
         </div>
-        <p class="cv-org">Korean government research institutes</p>
-        <ul>
-          <li>Government-funded drone security research.</li>
-          <li>Technical details and deliverables restricted under NDA.</li>
-        </ul>
+        <p class="cv-org">Korean government research institute, Daejeon, Korea</p>
       </div>
     </div>
 
-    {/* ── Projects ── */}
+    {/* ── Selected Projects ── */}
     <div class="cv-section">
-      <h2>// Projects</h2>
+      <h2>// Selected Projects</h2>
 
       <div class="cv-project">
         <h4>
@@ -261,9 +267,10 @@ import Sidebar from "../components/Sidebar.astro";
           — Virtual Satellite Antenna
         </h4>
         <p>
-          Desktop application that virtualizes satellite ground-station antenna
-          systems. GPredict integration for real-time tracking, IQ signal-file
-          analysis, and multi-antenna beam-pattern simulation.
+          Desktop application that virtualizes a full satellite ground station —
+          GPredict integration for real-time tracking, IQ signal-file analysis,
+          and multi-antenna beam-pattern simulation — enabling hands-on satellite
+          RF security research without physical hardware.
         </p>
       </div>
 
@@ -272,20 +279,21 @@ import Sidebar from "../components/Sidebar.astro";
           Mr.Radio — <a href="https://mrradio.kr" target="_blank" rel="noopener">mrradio.kr</a>
         </h4>
         <p>
-          Browser-based RF-hacking wargame platform with virtualized satellite
-          signal environments — signal reception, demodulation, and decoding
-          without physical SDR hardware. Built for Satellite RF security education.
+          Browser-based RF-hacking wargame with virtualized satellite signal
+          environments — signal reception, demodulation, and decoding without
+          physical SDR hardware. Built for satellite RF security education; over
+          100 registered users.
         </p>
       </div>
 
       <div class="cv-project">
         <h4>
           <a href="http://hackthedrone.org/" target="_blank" rel="noopener">Hack-the-Drone CTF</a>
-          — RF Challenges &amp; Operations (2023, 2024)
+          — RF Challenges (2023, 2024)
         </h4>
         <p>
-          Sole designer and author of all RF-domain challenges for the
-          Hack-the-Drone CTF competition. Also served in event operations both years.
+          Sole designer and author of all RF-domain challenges — and a drone
+          flight-system challenge — across both years.
         </p>
       </div>
     </div>
@@ -298,28 +306,6 @@ import Sidebar from "../components/Sidebar.astro";
         <li><strong>Hacktaeon CTF Finalist</strong> — National CTF hosted by Sejong City.</li>
       </ul>
     </div>
-
-
-    {/* ── Conferences Attended ── */}
-    <div class="cv-section">
-      <h2>// Conferences Attended</h2>
-      <ul>
-        <li>
-          <strong>NetSec-KR 2025</strong> — Korea Network Security Conference, Seoul, Korea.
-          <span class="cv-meta">Apr 2025</span>
-        </li>
-        <li>
-          <strong>Black Hat USA 2024</strong> — Las Vegas, NV, USA.
-          <span class="cv-meta">Aug 2024</span>
-        </li>
-        <li>
-          <strong>ACM WiSec 2024</strong> — ACM Conference on Security and
-          Privacy in Wireless and Mobile Networks, Seoul, Korea.
-          <span class="cv-meta">May 2024</span>
-        </li>
-      </ul>
-    </div>
-
 
     {/* ── Technical Skills ── */}
     <div class="cv-section">
@@ -344,11 +330,9 @@ import Sidebar from "../components/Sidebar.astro";
           </dd>
         </div>
         <div class="skill-row">
-          <dt>System hacking &amp; Embedded</dt>
+          <dt>Systems hacking</dt>
           <dd>
-            Proficient in reverse engineering and binary exploitation
-            using tools like IDA Pro. Also experienced in hardware-level
-            embedded hacking.
+            Reverse engineering and binary exploitation using tools like IDA Pro.
           </dd>
         </div>
       </dl>
