@@ -116,12 +116,15 @@ function formatShort(d: Date) {
     overflow: hidden;
   }
 
-  /* When sidebar is pinned to the left viewport edge (desktop),
-     flatten the left side so it looks "attached" */
+  /* On desktop the sidebar spans the full height between header and bottom,
+     so only the right edge acts as a divider — drop the left/top/bottom
+     borders and the rounding. */
   @media (min-width: 1024px) {
     .sidebar {
-      border-radius: 0 12px 12px 0;
+      border-radius: 0;
       border-left: none;
+      border-top: none;
+      border-bottom: none;
       box-shadow: 4px 0 20px rgba(0, 0, 0, 0.45);
     }
   }
@@ -135,11 +138,11 @@ function formatShort(d: Date) {
 
   .widget-title {
     font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--accent-strong);
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     margin-bottom: 14px;
   }
 

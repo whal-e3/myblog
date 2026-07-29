@@ -343,13 +343,26 @@ body::after {
   }
   .sidebar-col {
     position: fixed;
-    top: 50%;
+    /* Stretches the full height between the header (top) and the bottom of the
+       viewport, edge to edge. */
+    top: var(--header-height);
+    bottom: 0;
     left: 0;
-    transform: translateY(-50%);
     width: 260px;
-    max-height: calc(100vh - 80px);
     overflow-y: auto;
     z-index: 50;
+    /* Plain top-aligned scroll block. The sidebar content is taller than the
+       available height, so it simply scrolls from the top — the most reliable
+       behaviour (earlier flex-centering approaches clipped the overflow and
+       blocked scrolling to the Connect / Scan widgets at the bottom). */
+    /* Keep scrolling, but hide the visible scrollbar. */
+    scrollbar-width: none;             /* Firefox */
+    -ms-overflow-style: none;          /* old Edge/IE */
+  }
+  .sidebar-col::-webkit-scrollbar {    /* Chrome / Safari */
+    width: 0;
+    height: 0;
+    display: none;
   }
 }
 
