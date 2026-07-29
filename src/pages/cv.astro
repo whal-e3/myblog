@@ -17,10 +17,10 @@ import Sidebar from "../components/Sidebar.astro";
         <p class="cv-advisor">Advisor: Prof. Dae-Hee Jang (PWNLAB)</p>
         <p class="cv-tagline">Satellite Cybersecurity · wireless protocol analysis</p>
         <div class="cv-actions">
-          <button
-            type="button"
+          <a
             class="cv-download"
-            data-cv-download
+            href="/SunHyuk_Hwang_CV.pdf"
+            download="SunHyuk_Hwang_CV.pdf"
             aria-label="Download CV (PDF)"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -29,7 +29,7 @@ import Sidebar from "../components/Sidebar.astro";
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
             <span>Download CV (PDF)</span>
-          </button>
+          </a>
           <a class="cv-link" href="mailto:ericwhale0@gmail.com">
             Email ↗
           </a>
@@ -359,65 +359,10 @@ import Sidebar from "../components/Sidebar.astro";
   <Sidebar slot="sidebar" />
 </BaseLayout>
 
-<script>
-  // CV PDF button: show a popup toast when clicked (PDF not ready yet)
-  function wireCvDownload() {
-    const btn = document.querySelector<HTMLButtonElement>("[data-cv-download]");
-    if (!btn || btn.dataset.wired) return;
-    btn.dataset.wired = "1";
-
-    btn.addEventListener("click", () => {
-      // Remove any existing toast first
-      document.querySelectorAll(".cv-toast").forEach((t) => t.remove());
-
-      const toast = document.createElement("div");
-      toast.className = "cv-toast";
-      toast.textContent = "PDF is being prepared — check back soon.";
-      document.body.appendChild(toast);
-
-      // Force reflow then animate in
-      requestAnimationFrame(() => toast.classList.add("is-visible"));
-
-      // Animate out after 2.5s, remove after animation
-      setTimeout(() => {
-        toast.classList.remove("is-visible");
-        setTimeout(() => toast.remove(), 300);
-      }, 2500);
-    });
-  }
-  wireCvDownload();
-  document.addEventListener("astro:page-load", wireCvDownload);
-</script>
-
 <style is:global>
   /* Widen the main content column on the CV page so the paper can breathe */
   .main-content:has(.cv-paper) {
     max-width: 1080px;
-  }
-
-  /* Toast pop-up for the Download-CV button (global because the element
-     is created dynamically by JS and scoped styles wouldn't match it) */
-  .cv-toast {
-    position: fixed;
-    top: calc(var(--header-height, 64px) + 16px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-12px);
-    background: #120a18;
-    border: 1px solid #7dc7f5;
-    color: #fff1dc;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.9rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 9999;
-  }
-  .cv-toast.is-visible {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
   }
 </style>
 
