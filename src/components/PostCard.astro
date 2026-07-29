@@ -50,10 +50,14 @@ function formatDate(d: Date) {
     align-items: flex-start;
     gap: 16px;
   }
+  /* Fixed, identical box for every card. Explicit width AND height (not just
+     aspect-ratio) so every thumbnail is exactly the same size regardless of
+     the source image; object-fit: cover zooms/crops to fill when the ratio
+     doesn't match. */
   .post-card-cover {
     width: 160px;
+    height: 90px;
     flex-shrink: 0;
-    aspect-ratio: 16 / 9;
     overflow: hidden;
     border-radius: 8px;
     background: var(--bg-deep);
@@ -63,6 +67,7 @@ function formatDate(d: Date) {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     display: block;
     transition: transform 0.35s ease;
   }
@@ -87,6 +92,7 @@ function formatDate(d: Date) {
     }
     .post-card-cover {
       width: 112px;
+      height: 63px;
     }
   }
 </style>
