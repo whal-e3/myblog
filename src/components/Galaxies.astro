@@ -58,9 +58,9 @@ function makeStars(seed: number, count: number, layer: Layer): Star[] {
 // Sparse / dim / slow. `dur` = seconds to drift one viewport width (bigger =
 // slower). These are deliberately high so the motion is barely-there calm.
 const layerData = [
-  { dur: 1000, opacity: 0.55, stars: makeStars(11111, 55, "far") },
-  { dur: 680,  opacity: 0.78, stars: makeStars(22222, 30, "mid") },
-  { dur: 430,  opacity: 1.0,  stars: makeStars(33333, 15, "near") },
+  { dur: 1400, opacity: 0.55, stars: makeStars(11111, 55, "far") },  // dim  → slowest
+  { dur: 700,  opacity: 0.78, stars: makeStars(22222, 30, "mid") },
+  { dur: 320,  opacity: 1.0,  stars: makeStars(33333, 15, "near") }, // bright → fastest
 ].map((l) => ({
   dur: l.dur,
   opacity: l.opacity,
@@ -141,7 +141,9 @@ const layerData = [
 
       var ctx = canvas.getContext("2d");
       if (!ctx) return;
-      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Cap DPR at 1.5 — background dots don't need retina resolution, and a
+      // smaller buffer means much cheaper per-frame clear+redraw (less lag).
+      var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       var W = 0, H = 0;
 
       function resize() {
@@ -156,8 +158,6 @@ const layerData = [
       var reduce =
         window.matchMedia &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      var TWO_PI = Math.PI * 2;
-
       function draw(elapsedSec) {
         ctx.clearRect(0, 0, W, H);
         for (var li = 0; li < layers.length; li++) {
@@ -171,10 +171,9 @@ const layerData = [
             var x = (s.x / 100) * W - shift;
             if (x < 0) x += W;
             var y = (s.y / 100) * H;
-            ctx.beginPath();
-            ctx.fillStyle = s.c;
-            ctx.arc(x, y, s.r, 0, TWO_PI);
-            ctx.fill();
+            var d = s.r * 2;                   // square is far cheaper than
+            ctx.fillStyle = s.c;               // arc()+fill() and looks the
+            ctx.fillRect(x - s.r, y - s.r, d, d); // same at this tiny size
           }
         }
         ctx.globalAlpha = 1;
