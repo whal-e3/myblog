@@ -1,9 +1,10 @@
 ---
 title: Mr.Radio
 tagline: World's first virtual RF hacking wargame
+period: "2026-03 – present"
 status: active
 featured: true
-order: 2
+order: 1
 cover: /assets/content/project/mr_radio/mrradio_wargames.png
 links:
   - label: mrradio.kr

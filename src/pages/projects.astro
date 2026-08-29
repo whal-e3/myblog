@@ -3,11 +3,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Sidebar from "../components/Sidebar.astro";
 import { getCollection, render } from "astro:content";
 
-// Load projects, sort by featured then order
-const projects = (await getCollection("projects")).sort((a, b) => {
-  if (a.data.featured !== b.data.featured) return a.data.featured ? -1 : 1;
-  return a.data.order - b.data.order;
-});
+// Load projects, sort chronologically (most recent first).
+// `order` is the chronological rank: 0 = most recent, higher = older.
+const projects = (await getCollection("projects")).sort(
+  (a, b) => a.data.order - b.data.order,
+);
 
 // Load all posts so we can resolve project.posts → post entries
 const now = new Date();
@@ -78,9 +78,14 @@ function formatDate(d: Date) {
         <div class="project-info">
           <div class="project-head">
             <h2 class="project-name">{project.data.title}</h2>
-            <span class={`status status-${project.data.status}`}>
-              {statusLabel[project.data.status]}
-            </span>
+            <div class="project-meta">
+              {project.data.period && (
+                <span class="project-period">{project.data.period}</span>
+              )}
+              <span class={`status status-${project.data.status}`}>
+                {statusLabel[project.data.status]}
+              </span>
+            </div>
           </div>
           <p class="project-tagline">{project.data.tagline}</p>
 
@@ -176,6 +181,18 @@ function formatDate(d: Date) {
     font-weight: 700;
     color: var(--text-primary);
     letter-spacing: -0.02em;
+  }
+  .project-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .project-period {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
   }
   .status {
     font-family: var(--font-mono);
