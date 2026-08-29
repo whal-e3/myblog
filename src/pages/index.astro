@@ -17,6 +17,12 @@ const starred = allPosts
 const recent = [...allPosts]
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);
+
+// Latest 4 projects, by the same chronological order used on /projects
+// (lower order = more recent).
+const latestProjects = (await getCollection("projects"))
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 4);
 ---
 
 <BaseLayout title="sunhyuk.dev" sidebar>
@@ -59,73 +65,42 @@ const recent = [...allPosts]
     </div>
   </section>
 
-  {/* ── Featured Projects ── */}
+  {/* ── Latest Projects ── */}
   <section class="home-section">
     <h2 class="section-title">// Projects</h2>
     <div class="project-grid">
-      <a href="/projects" class="project-card">
-        <div class="project-thumb">
-          <img
-            src="/assets/content/project/xxxx_sat/cover.webp"
-            alt="xxxx-SAT — 7th CubeSat Competition poster"
-            width="1600"
-            height="700"
-            loading="eager"
-          />
-        </div>
-        <div class="project-body">
-          <h3 class="project-title">xxxx-SAT</h3>
-          <p class="project-tag">
-            Ground System Lead (RLE) for a CubeSat in the 7th Korean CubeSat
-            Competition. Designing the Mission Operations Center (MOC) that
-            communicates with the satellite.
-          </p>
-          <span class="project-badge badge-blue">KASA / KARI</span>
-        </div>
-      </a>
-
-      <a href="/blog/mrradio" class="project-card">
-        <div class="project-thumb">
-          <img
-            src="/assets/content/project/mr_radio/mrradio_wargames.png"
-            alt="Mr.Radio wargame interface"
-            width="1600"
-            height="900"
-            loading="eager"
-          />
-        </div>
-        <div class="project-body">
-          <h3 class="project-title">Mr.Radio</h3>
-          <p class="project-tag">
-            World's first virtual RF hacking wargame — receive, demodulate, decode
-            satellite signals in the browser.
-          </p>
-          <span class="project-badge badge-blue">mrradio.kr</span>
-        </div>
-      </a>
-
-      <a href="https://github.com/whal-e3" target="_blank" rel="noopener" class="project-card">
-        <div class="project-thumb">
-          <video
-            src="/assets/content/project/mr_radio/vsa.mp4"
-            width="1600"
-            height="900"
-            autoplay
-            muted
-            loop
-            playsinline
-            preload="metadata"
-          ></video>
-        </div>
-        <div class="project-body">
-          <h3 class="project-title">OpenVSA</h3>
-          <p class="project-tag">
-            Virtual satellite ground station — GPredict integration, 3D antenna
-            visualization, IQ signal analysis. First of its kind.
-          </p>
-        </div>
-      </a>
+      {latestProjects.map((p) => (
+        <a href="/projects" class="project-card">
+          <div class="project-thumb">
+            {p.data.coverVideo ? (
+              <video
+                src={p.data.coverVideo}
+                width="1600"
+                height="900"
+                autoplay
+                muted
+                loop
+                playsinline
+                preload="metadata"
+              ></video>
+            ) : (
+              <img
+                src={p.data.cover}
+                alt={p.data.title}
+                width="1600"
+                height="900"
+                loading="eager"
+              />
+            )}
+          </div>
+          <div class="project-body">
+            <h3 class="project-title">{p.data.title}</h3>
+            <p class="project-tag">{p.data.tagline}</p>
+          </div>
+        </a>
+      ))}
     </div>
+    <a href="/projects" class="see-all">All projects →</a>
   </section>
 
   {/* ── Recent posts ── */}
@@ -272,7 +247,17 @@ const recent = [...allPosts]
     flex: 1;
   }
 
-  /* ── Featured Project cards ── */
+  /* ── Latest Project cards ── */
+  .see-all {
+    display: inline-block;
+    margin-top: 16px;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+  .see-all:hover {
+    color: var(--accent-blue);
+  }
   .project-grid {
     display: grid;
     /* auto-fit minmax lets the grid flow: 3 cards on wide screens, 2 on
