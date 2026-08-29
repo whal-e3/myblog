@@ -21,6 +21,10 @@ const projects = defineCollection({
   schema: z.object({
     title: z.string(),
     tagline: z.string(),
+    // Korean translations (optional). taglineKo → card subtitle;
+    // bodyKo → Korean project body (markdown string, rendered on /projects).
+    taglineKo: z.string().optional(),
+    bodyKo: z.string().optional(),
     period: z.string().optional(),
     status: z.enum(["active", "shipped", "concluded", "upcoming", "archived"]).default("active"),
     featured: z.boolean().default(false),

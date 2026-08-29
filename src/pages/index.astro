@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import PostCard from "../components/PostCard.astro";
 import Sidebar from "../components/Sidebar.astro";
+import T from "../components/T.astro";
 import { getCollection } from "astro:content";
 
 const now = new Date();
@@ -28,7 +29,11 @@ const latestProjects = (await getCollection("projects"))
 <BaseLayout title="sunhyuk.dev" sidebar>
   <section class="hero">
     <h1 class="hero-title">SunHyuk Hwang</h1>
-    <p class="hero-focus">I'm a space security researcher focused on satellites — their RF links, protocols, and software — and on making that security research hands-on and open rather than hardware-gated.</p>
+    <p class="hero-focus">
+      I'm a space security researcher focused on satellites — their RF links,
+      protocols, and software — and on making that security research hands-on and
+      open rather than hardware-gated.
+    </p>
     <div class="hero-links">
       <a href="mailto:ericwhale0@gmail.com" class="hero-contact">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -48,17 +53,23 @@ const latestProjects = (await getCollection("projects"))
         <div class="research-block">
           <h3 class="research-label">Interests</h3>
           <ul class="research-list">
-            <li>Satellite RF &amp; protocol security</li>
-            <li>Ground-segment and flight software security</li>
-            <li>Tooling &amp; simulation that lowers the barrier to space-systems research</li>
+            <li><T en="Satellite RF & protocol security" ko="위성 RF·프로토콜 보안" /></li>
+            <li><T en="Ground-segment and flight software security" ko="지상국·비행 소프트웨어 보안" /></li>
+            <li><T en="Tooling & simulation that lowers the barrier to space-systems research" ko="우주 시스템 연구의 진입장벽을 낮추는 도구·시뮬레이션" /></li>
           </ul>
         </div>
         <div class="research-block">
           <h3 class="research-label">Currently</h3>
           <p class="research-currently">
-            Ground System Lead in the KHU team for a KARI-hosted CubeSat
-            competition; adding new challenges to
-            <a href="https://mrradio.kr" target="_blank" rel="noopener">Mr.Radio</a>.
+            <span class="lang-en">
+              Ground System Lead in the KHU team for a KARI-hosted CubeSat
+              competition; adding new challenges to
+              <a href="https://mrradio.kr" target="_blank" rel="noopener">Mr.Radio</a>.
+            </span>
+            <span class="lang-ko">
+              KARI 주최 큐브위성 경진대회 경희대 팀의 지상국 리드,
+              <a href="https://mrradio.kr" target="_blank" rel="noopener">Mr.Radio</a>에 새 챌린지 추가 중.
+            </span>
           </p>
         </div>
       </div>
@@ -95,7 +106,7 @@ const latestProjects = (await getCollection("projects"))
           </div>
           <div class="project-body">
             <h3 class="project-title">{p.data.title}</h3>
-            <p class="project-tag">{p.data.tagline}</p>
+            <p class="project-tag"><T en={p.data.tagline} ko={p.data.taglineKo} /></p>
           </div>
         </a>
       ))}

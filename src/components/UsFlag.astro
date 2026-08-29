@@ -1,0 +1,22 @@
+---
+// US flag — compact inline SVG (same reason as KrFlag: emoji flags don't render
+// on Windows). 13 stripes + blue canton; stars suggested as a small dot grid.
+const stripes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const h = 24 / 13; // stripe height in a 36x24 box
+---
+<svg class="flag-icon" viewBox="0 0 36 24" role="img" aria-label="English">
+  <rect width="36" height="24" fill="#fff" />
+  {stripes
+    .filter((i) => i % 2 === 0)
+    .map((i) => (
+      <rect x="0" y={i * h} width="36" height={h} fill="#B22234" />
+    ))}
+  {/* Canton */}
+  <rect x="0" y="0" width="15.2" height={h * 7} fill="#3C3B6E" />
+  {/* Star suggestion — small white dots (real stars are illegible at this size) */}
+  <g fill="#fff">
+    {[2.2, 5.8, 9.4, 13].map((cx) =>
+      [2.2, 5.4, 8.6, 11.8].map((cy) => <circle cx={cx} cy={cy} r="0.7" />)
+    )}
+  </g>
+</svg>

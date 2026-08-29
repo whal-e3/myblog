@@ -1,7 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Sidebar from "../components/Sidebar.astro";
+import T from "../components/T.astro";
 import { getCollection, render } from "astro:content";
+import { marked } from "marked";
 
 // Load projects, sort chronologically (most recent first).
 // `order` is the chronological rank: 0 = most recent, higher = older.
@@ -87,7 +89,9 @@ function formatDate(d: Date) {
               </span>
             </div>
           </div>
-          <p class="project-tagline">{project.data.tagline}</p>
+          <p class="project-tagline">
+            <T en={project.data.tagline} ko={project.data.taglineKo} />
+          </p>
 
           {project.data.links.length > 0 && (
             <div class="project-links">
@@ -100,7 +104,14 @@ function formatDate(d: Date) {
           )}
 
           <div class="project-body prose">
-            <Content />
+            {project.data.bodyKo ? (
+              <>
+                <div class="lang-en"><Content /></div>
+                <div class="lang-ko" set:html={marked.parse(project.data.bodyKo)} />
+              </>
+            ) : (
+              <Content />
+            )}
           </div>
 
           {linkedPosts.length > 0 && (
@@ -184,8 +195,9 @@ function formatDate(d: Date) {
   }
   .project-meta {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
     flex-shrink: 0;
   }
   .project-period {
@@ -283,6 +295,7 @@ function formatDate(d: Date) {
   @media (max-width: 640px) {
     .project-info { padding: 20px 20px 22px; }
     .project-head { flex-direction: column; gap: 6px; align-items: flex-start; }
+    .project-meta { align-items: flex-start; }
     .project-name { font-size: 1.3rem; }
     .related-link { flex-direction: column; gap: 2px; align-items: flex-start; }
   }

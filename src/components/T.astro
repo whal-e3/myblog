@@ -1,0 +1,17 @@
+---
+// Bilingual inline text. Renders both languages; CSS shows the active one
+// (see the [data-lang] rules in BaseLayout). If no Korean is given, the
+// English text renders unwrapped so it always shows (graceful fallback).
+interface Props {
+  en: string;
+  ko?: string;
+}
+const { en, ko } = Astro.props;
+---
+{ko ? (
+  <>
+    <span class="lang-en">{en}</span><span class="lang-ko">{ko}</span>
+  </>
+) : (
+  en
+)}

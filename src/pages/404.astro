@@ -1,14 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import T from "../components/T.astro";
 ---
 
 <BaseLayout title="404 — Lost in space" description="Page not found.">
   <section class="notfound">
     <div class="notfound-code">404</div>
-    <h1 class="notfound-title">Signal lost.</h1>
+    <h1 class="notfound-title"><T en="Signal lost." ko="신호 유실." /></h1>
     <p class="notfound-message">
-      The page you're looking for has drifted beyond range, was never here,
-      or got swallowed by a black hole.
+      <T
+        en="The page you're looking for has drifted beyond range, was never here, or got swallowed by a black hole."
+        ko="찾으시는 페이지는 통신 범위를 벗어났거나, 애초에 없었거나, 블랙홀에 빨려 들어갔습니다."
+      />
     </p>
     <div class="notfound-actions">
       <a href="/" class="notfound-link">← Return to base</a>

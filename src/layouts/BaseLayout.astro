@@ -1,5 +1,7 @@
 ---
 import Galaxies from "../components/Galaxies.astro";
+import KrFlag from "../components/KrFlag.astro";
+import UsFlag from "../components/UsFlag.astro";
 import { ClientRouter } from "astro:transitions";
 
 interface Props {
@@ -22,6 +24,19 @@ const isCurrent = (href: string) =>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Apply the saved language before first paint (no flash of the wrong language) */}
+    <script is:inline>
+      (function () {
+        try {
+          var l = localStorage.getItem("lang");
+          l = l === "ko" ? "ko" : "en";
+        } catch (e) {
+          l = "en";
+        }
+        document.documentElement.dataset.lang = l;
+        document.documentElement.lang = l;
+      })();
+    </script>
     <meta name="description" content={description} />
     <title>{title === siteTitle ? title : `${title} — ${siteTitle}`}</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -41,6 +56,9 @@ const isCurrent = (href: string) =>
             <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
             <a href="/projects" class:list={[{ "is-current": isCurrent("/projects") }]} aria-current={isCurrent("/projects") ? "page" : undefined}>Projects</a>
             <a href="/cv"       class:list={[{ "is-current": isCurrent("/cv") }]}       aria-current={isCurrent("/cv")       ? "page" : undefined}>CV</a>
+            <button class="lang-toggle" type="button" aria-label="Toggle language / 언어 전환">
+              <span class="lang-en"><KrFlag /></span><span class="lang-ko"><UsFlag /></span>
+            </button>
           </nav>
           {sidebar && (
             <button
@@ -96,9 +114,15 @@ const isCurrent = (href: string) =>
             <a href="mailto:ericwhale0@gmail.com">Email</a>
           </div>
           <p class="footer-copyright">
-            © 2026 SunHyuk Hwang. All rights reserved. No content herein may be
-            reproduced, distributed, or transmitted in any form without the prior
-            written consent of the copyright holder.
+            <span class="lang-en">
+              © 2026 SunHyuk Hwang. All rights reserved. No content herein may be
+              reproduced, distributed, or transmitted in any form without the prior
+              written consent of the copyright holder.
+            </span>
+            <span class="lang-ko">
+              © 2026 황선혁. All rights reserved. 저작권자의 사전 서면 동의 없이는 본
+              사이트의 어떠한 콘텐츠도 어떤 형태로든 복제·배포·전송할 수 없습니다.
+            </span>
           </p>
         </div>
       </footer>
@@ -108,6 +132,36 @@ const isCurrent = (href: string) =>
 
 <style is:global>
   @import "../styles/global.css";
+
+  /* ── Language toggle: show only the active language ── */
+  :root[data-lang="en"] .lang-ko { display: none !important; }
+  :root[data-lang="ko"] .lang-en { display: none !important; }
+
+  .lang-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    transition: transform 0.15s;
+    line-height: 0;
+  }
+  .lang-toggle:hover {
+    transform: translateY(-1px);
+  }
+  .lang-toggle span {
+    display: inline-flex;
+    line-height: 0;
+  }
+  .flag-icon {
+    width: 22px;
+    height: auto;
+    display: block;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
 </style>
 
 <script>
@@ -122,6 +176,17 @@ const isCurrent = (href: string) =>
       closeDrawer();
     }
   });
+
+  // ── Language: re-apply the saved choice after every SPA navigation ──
+  function applyLang() {
+    let l = "en";
+    try {
+      l = localStorage.getItem("lang") === "ko" ? "ko" : "en";
+    } catch (e) {}
+    document.documentElement.dataset.lang = l;
+    document.documentElement.lang = l;
+  }
+  document.addEventListener("astro:after-swap", applyLang);
 
   // ── Element-specific listeners — re-register on every SPA page-load ──
   function wirePageElements() {
@@ -142,13 +207,27 @@ const isCurrent = (href: string) =>
     closeBtn?.addEventListener("click", closeDrawer);
     backdrop?.addEventListener("click", closeDrawer);
 
+    // Language toggle
+    const langBtn = document.querySelector<HTMLButtonElement>(".lang-toggle");
+    langBtn?.addEventListener("click", () => {
+      const next =
+        document.documentElement.dataset.lang === "ko" ? "en" : "ko";
+      try {
+        localStorage.setItem("lang", next);
+      } catch (e) {}
+      document.documentElement.dataset.lang = next;
+      document.documentElement.lang = next;
+    });
+
     // Auto-close drawer when any link inside it is clicked
     document.querySelectorAll<HTMLAnchorElement>(".sidebar-col a").forEach((link) => {
       link.addEventListener("click", closeDrawer);
     });
   }
 
-  // Run on initial load + every SPA transition
-  wirePageElements();
+  // Run on initial load + every SPA transition. `astro:page-load` fires on the
+  // first load too, so we must NOT also call wirePageElements() directly —
+  // doing both double-binds every click handler (the language toggle would flip
+  // twice per click and appear to do nothing).
   document.addEventListener("astro:page-load", wirePageElements);
 </script>
