@@ -57,13 +57,14 @@ function formatDate(d: Date) {
             {project.data.coverVideo ? (
               <video
                 src={project.data.coverVideo}
+                poster={project.data.coverVideo.replace(/\.mp4$/, "-poster.jpg")}
                 width="1600"
                 height="700"
                 autoplay
                 muted
                 loop
                 playsinline
-                preload="metadata"
+                preload="auto"
               />
             ) : (
               <img

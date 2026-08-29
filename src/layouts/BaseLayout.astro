@@ -225,9 +225,24 @@ const isCurrent = (href: string) =>
     });
   }
 
+  // ── Cover videos: force autoplay after every navigation ──
+  // With <ClientRouter />, `autoplay` only fires on a full page load, so after
+  // an SPA navigation (or a back/forward swap) the cover videos can sit blank —
+  // "나왔다 안나왔다". Explicitly (re)start every muted autoplay video instead.
+  function playCoverVideos() {
+    document.querySelectorAll<HTMLVideoElement>("video[autoplay]").forEach((v) => {
+      v.muted = true; // required for programmatic autoplay
+      const p = v.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    });
+  }
+
   // Run on initial load + every SPA transition. `astro:page-load` fires on the
   // first load too, so we must NOT also call wirePageElements() directly —
   // doing both double-binds every click handler (the language toggle would flip
   // twice per click and appear to do nothing).
-  document.addEventListener("astro:page-load", wirePageElements);
+  document.addEventListener("astro:page-load", () => {
+    wirePageElements();
+    playCoverVideos();
+  });
 </script>

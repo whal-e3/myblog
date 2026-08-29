@@ -86,13 +86,14 @@ const latestProjects = (await getCollection("projects"))
             {p.data.coverVideo ? (
               <video
                 src={p.data.coverVideo}
+                poster={p.data.coverVideo.replace(/\.mp4$/, "-poster.jpg")}
                 width="1600"
                 height="900"
                 autoplay
                 muted
                 loop
                 playsinline
-                preload="metadata"
+                preload="auto"
               ></video>
             ) : (
               <img

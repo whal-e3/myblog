@@ -8,7 +8,7 @@ bodyKo: |
   제 챌린지는 대부분 RF 영역, 즉 드론 CTF에서 흔히 다루지 않았던 무선 링크 계층에 관한 것이었습니다. RF 외에도 QGroundControl (QGC) 소프트웨어 분석과 물리적 요소를 결합한 Rubik's Drone이라는 챌린지도 제작했습니다. 참가자는 GCS를 분석한 뒤 드론을 실제로 돌리고 기울여 센서 값을 정해진 패턴에 맞춰야 했고, 그러면 flag가 열리는 방식의 문제였습니다.
 period: "2023 – 2024"
 status: concluded
-order: 9
+order: 10
 cover: /assets/content/project/hack_the_drone/cover.png
 links:
   - label: hackthedrone.org
