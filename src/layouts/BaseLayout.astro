@@ -226,14 +226,24 @@ const isCurrent = (href: string) =>
   }
 
   // ── Cover videos: force autoplay after every navigation ──
-  // With <ClientRouter />, `autoplay` only fires on a full page load, so after
-  // an SPA navigation (or a back/forward swap) the cover videos can sit blank —
-  // "나왔다 안나왔다". Explicitly (re)start every muted autoplay video instead.
+  // With <ClientRouter />, `autoplay` only fires when the browser parses the
+  // element on a full page load. After an SPA swap the video element is inserted
+  // via script, so it neither auto-plays nor necessarily starts loading — it
+  // just sits blank until a hard refresh. Re-kick loading, then play once it can.
   function playCoverVideos() {
     document.querySelectorAll<HTMLVideoElement>("video[autoplay]").forEach((v) => {
       v.muted = true; // required for programmatic autoplay
-      const p = v.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
+      v.playsInline = true;
+      const play = () => {
+        const p = v.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      };
+      if (v.readyState >= 2) {
+        play();
+      } else {
+        v.addEventListener("canplay", play, { once: true });
+        try { v.load(); } catch (e) {}
+      }
     });
   }
 
@@ -245,4 +255,7 @@ const isCurrent = (href: string) =>
     wirePageElements();
     playCoverVideos();
   });
+  // Also right after the DOM swap (fires before page-load) so the video starts
+  // loading as early as possible.
+  document.addEventListener("astro:after-swap", playCoverVideos);
 </script>
