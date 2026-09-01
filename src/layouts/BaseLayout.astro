@@ -27,14 +27,17 @@ const isCurrent = (href: string) =>
     {/* Apply the saved language before first paint (no flash of the wrong language) */}
     <script is:inline>
       (function () {
+        var root = document.documentElement;
+        // Country-based default stamped by the Cloudflare Worker (KR → ko, else
+        // en); falls back to en in dev where no Worker runs.
+        var def = root.getAttribute("data-default-lang") || "en";
+        var l = def;
         try {
-          var l = localStorage.getItem("lang");
-          l = l === "ko" ? "ko" : "en";
-        } catch (e) {
-          l = "en";
-        }
-        document.documentElement.dataset.lang = l;
-        document.documentElement.lang = l;
+          var s = localStorage.getItem("lang"); // explicit user choice wins
+          if (s === "ko" || s === "en") l = s;
+        } catch (e) {}
+        root.dataset.lang = l;
+        root.lang = l;
       })();
     </script>
     <meta name="description" content={description} />
@@ -52,19 +55,19 @@ const isCurrent = (href: string) =>
       <header>
         <div class="container header-row">
           <a href="/" class="site-title">{siteTitle}</a>
-          <nav>
-            <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
-            <a href="/projects" class:list={[{ "is-current": isCurrent("/projects") }]} aria-current={isCurrent("/projects") ? "page" : undefined}>Projects</a>
-            <a href="/cv"       class:list={[{ "is-current": isCurrent("/cv") }]}       aria-current={isCurrent("/cv")       ? "page" : undefined}>CV</a>
+          <div class="header-right">
+            <nav class="nav-desktop">
+              <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
+              <a href="/projects" class:list={[{ "is-current": isCurrent("/projects") }]} aria-current={isCurrent("/projects") ? "page" : undefined}>Projects</a>
+              <a href="/cv"       class:list={[{ "is-current": isCurrent("/cv") }]}       aria-current={isCurrent("/cv")       ? "page" : undefined}>CV</a>
+            </nav>
             <button class="lang-toggle" type="button" aria-label="Toggle language / 언어 전환">
               <span class="lang-en"><KrFlag /></span><span class="lang-ko"><UsFlag /></span>
             </button>
-          </nav>
-          {sidebar && (
             <button
               class="menu-toggle"
               type="button"
-              aria-label="Open sidebar"
+              aria-label="Open menu"
               aria-controls="sidebar-drawer"
               aria-expanded="false"
             >
@@ -75,7 +78,7 @@ const isCurrent = (href: string) =>
                 <line x1="4" y1="17" x2="20" y2="17" />
               </svg>
             </button>
-          )}
+          </div>
         </div>
       </header>
       <main>
@@ -83,25 +86,26 @@ const isCurrent = (href: string) =>
           <div class="main-content">
             <slot />
           </div>
-          {sidebar && (
-            <>
-              <div class="sidebar-col" id="sidebar-drawer">
-                <button
-                  class="drawer-close"
-                  type="button"
-                  aria-label="Close sidebar"
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                  </svg>
-                </button>
-                <slot name="sidebar" />
-              </div>
-              <div class="sidebar-backdrop" aria-hidden="true"></div>
-            </>
-          )}
+          <div class="sidebar-col" id="sidebar-drawer">
+            <button
+              class="drawer-close"
+              type="button"
+              aria-label="Close menu"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="6" y1="6" x2="18" y2="18" />
+                <line x1="18" y1="6" x2="6" y2="18" />
+              </svg>
+            </button>
+            <nav class="nav-mobile">
+              <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
+              <a href="/projects" class:list={[{ "is-current": isCurrent("/projects") }]} aria-current={isCurrent("/projects") ? "page" : undefined}>Projects</a>
+              <a href="/cv"       class:list={[{ "is-current": isCurrent("/cv") }]}       aria-current={isCurrent("/cv")       ? "page" : undefined}>CV</a>
+            </nav>
+            <slot name="sidebar" />
+          </div>
+          <div class="sidebar-backdrop" aria-hidden="true"></div>
         </div>
       </main>
       <footer>
@@ -162,6 +166,17 @@ const isCurrent = (href: string) =>
     border-radius: 2px;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
   }
+
+  /* Mobile: the header row (title · nav · flag · hamburger) gets tight, so
+     shrink the flag and its padding to stop it colliding with the menu button. */
+  @media (max-width: 768px) {
+    .flag-icon { width: 18px; }
+    .lang-toggle { padding: 2px 5px; margin-left: 2px; }
+  }
+  @media (max-width: 480px) {
+    .flag-icon { width: 16px; }
+    .lang-toggle { padding: 2px 3px; }
+  }
 </style>
 
 <script>
@@ -179,12 +194,14 @@ const isCurrent = (href: string) =>
 
   // ── Language: re-apply the saved choice after every SPA navigation ──
   function applyLang() {
-    let l = "en";
+    const root = document.documentElement;
+    let l = root.getAttribute("data-default-lang") || "en";
     try {
-      l = localStorage.getItem("lang") === "ko" ? "ko" : "en";
+      const s = localStorage.getItem("lang");
+      if (s === "ko" || s === "en") l = s;
     } catch (e) {}
-    document.documentElement.dataset.lang = l;
-    document.documentElement.lang = l;
+    root.dataset.lang = l;
+    root.lang = l;
   }
   document.addEventListener("astro:after-swap", applyLang);
 

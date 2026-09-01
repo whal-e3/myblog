@@ -90,6 +90,7 @@ function formatShort(d: Date) {
         ))}
       </ul>
     )}
+    <a href="/blog" class="widget-more">All posts →</a>
   </section>
 
   {/* Connect */}
@@ -264,6 +265,16 @@ function formatShort(d: Date) {
     font-family: var(--font-mono);
     font-size: 0.72rem;
     color: var(--text-muted);
+  }
+  .widget-more {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .widget-more:hover {
+    color: var(--accent-strong);
   }
 
   /* Connect — 2 links per row */

@@ -51,7 +51,7 @@ export default {
           headers: securityHeaders(),
         });
       }
-      return env.ASSETS.fetch(request);
+      return serveAssets(request, env);
     }
 
     if (url.pathname === "/oauth/auth") {
@@ -63,9 +63,42 @@ export default {
       });
     }
 
-    return env.ASSETS.fetch(request);
+    return serveAssets(request, env);
   },
 };
+
+// ─── Static assets + country-based default language ─────────────────────────
+// The site language defaults to the visitor's country (Korea → Korean,
+// elsewhere → English) by stamping `data-default-lang` on <html> at the edge.
+// This is only a DEFAULT: the client script lets an explicit user choice
+// (localStorage 'lang', set by the header toggle) override it. Non-HTML
+// responses pass through untouched.
+async function serveAssets(request: Request, env: Env): Promise<Response> {
+  const res = await env.ASSETS.fetch(request);
+  const type = res.headers.get("Content-Type") || "";
+  if (!type.includes("text/html")) return res;
+
+  const country = (request.headers.get("CF-IPCountry") || "").toUpperCase();
+  const lang = country === "KR" ? "ko" : "en";
+
+  const out = new HTMLRewriter()
+    .on("html", {
+      element(el) {
+        el.setAttribute("data-default-lang", lang);
+      },
+    })
+    .transform(res);
+
+  // The default language varies per country, so this HTML must not be stored by
+  // a shared/edge cache and replayed to visitors from a different country.
+  const headers = new Headers(out.headers);
+  headers.set("Cache-Control", "private, no-cache, must-revalidate");
+  return new Response(out.body, {
+    status: out.status,
+    statusText: out.statusText,
+    headers,
+  });
+}
 
 // ─── GET /oauth/auth ───────────────────────────────────────────────────────
 // Render the password form. Submission happens via fetch() so the popup
