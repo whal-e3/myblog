@@ -427,11 +427,21 @@ header .container {
 }
 
 .site-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   font-family: var(--font-header);
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.02em;
+}
+.site-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: block;
+  flex-shrink: 0;
 }
 .site-title:hover {
   color: var(--accent);
@@ -822,6 +832,7 @@ footer a:hover {
   .post-card-title { font-size: 1.1rem; }
   .post-meta { gap: 10px; font-size: 0.82rem; }
   .site-title { font-size: 1rem; }
+  .site-logo { width: 24px; height: 24px; }
   .nav-desktop { gap: 14px; }
   .nav-desktop a { font-size: 0.8rem; letter-spacing: 0.08em; }
   footer { padding: 24px 0; font-size: 0.78rem; }

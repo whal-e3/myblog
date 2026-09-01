@@ -43,6 +43,9 @@ const isCurrent = (href: string) =>
     <meta name="description" content={description} />
     <title>{title === siteTitle ? title : `${title} — ${siteTitle}`}</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     {/* KaTeX styles for math rendering in posts */}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous" />
@@ -54,7 +57,7 @@ const isCurrent = (href: string) =>
     <div class="page-wrapper">
       <header>
         <div class="container header-row">
-          <a href="/" class="site-title">{siteTitle}</a>
+          <a href="/" class="site-title"><img src="/logo.png" alt="" class="site-logo" width="30" height="30" />{siteTitle}</a>
           <div class="header-right">
             <nav class="nav-desktop">
               <a href="/blog"     class:list={[{ "is-current": isCurrent("/blog") }]}     aria-current={isCurrent("/blog")     ? "page" : undefined}>Blog</a>
