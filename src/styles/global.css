@@ -490,6 +490,32 @@ footer a:hover {
   color: var(--text-muted);
 }
 
+/* QR moved from the sidebar into the footer */
+.footer-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.footer-qr img {
+  width: 112px;
+  height: 112px;
+  box-sizing: border-box;
+  padding: 9px;
+  background: rgba(245, 230, 212, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  display: block;
+}
+.footer-qr-caption {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
 /* ── Prose (blog post content) ── */
 .prose {
   color: var(--text-primary);
