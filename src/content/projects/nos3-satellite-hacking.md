@@ -7,7 +7,7 @@ bodyKo: |
 
   위성 하드웨어 중 하나인 reaction wheel로 이어지는 명령 경로를 추적해 set-torque 명령을 Wireshark로 캡처하고(평문 CCSDS 133.0-B-1 헤더), Python 스크립트로 torque 값을 크게 높인 패킷을 송신하여 시뮬레이션 위성을 제어 불능 상태로 회전시켰습니다. 또한 이를 CCSDS SDLS (CryptoLib 라이브러리)를 활성화함으로써 공격이 차단되는 것까지 확인했습니다.
 
-  CISC 2025 게재 (1저자)
+  정보보호학회지 게재 (2025년 4월, 1저자)
 period: "2025"
 status: concluded
 order: 5
@@ -22,4 +22,4 @@ An attack-and-defense scenario on [**NASA's NOS3**](https://github.com/nasa/nos3
 
 I traced the command path to the virtual **reaction wheel**, captured the set-torque command in Wireshark (plaintext **CCSDS 133.0-B-1** header, no authentication), and — with a Python script — replayed a modified copy with the torque cranked far up, spinning the simulated satellite out of control. On the defense side, I demonstrated that enabling CCSDS **SDLS** (via the **CryptoLib** library) stops this — commands are encrypted and authenticated, so injected ones are rejected.
 
-Published at **CISC 2025** (first author).
+Published in **Review of KIISC** (정보보호학회지), Apr 2025 (first author).

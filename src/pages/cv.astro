@@ -51,7 +51,7 @@ import T from "../components/T.astro";
       <h2>// <T en="Research Interests" ko="연구 관심분야" /></h2>
       <p>
         <T
-          en="I work on the security of satellite systems, with a current focus on the RF and communication-protocol layer — signal reception, protocol analysis, and exploitation. A through-line in my work is building open tools and simulators that make this research hands-on and reproducible without specialized hardware. I aim to extend this from the RF link into the software that runs spacecraft — onboard flight and ground-segment systems."
+          en="I work on the security of satellite systems, with a current focus on the RF and communication-protocol layer — signal reception, protocol analysis, and exploitation. Satellite security research has lacked a hands-on, reproducible platform, so I built open satellite signal simulators (VSA, MENKAR) that reproduce the satellite environment without specialized hardware or a real satellite. Alongside them I gathered hands-on experience receiving live satellite signals, and I now want to take that into security research on real systems: eavesdropping on LEO satellite downlinks, satellite signal spoofing, satellite system exploitation, and the hardware security of satellite user terminals such as Starlink."
           ko="위성 시스템 보안을 연구하며, 현재는 RF 및 통신 프로토콜 계층 — 신호 수신, 프로토콜 분석, 익스플로잇 — 에 집중하고 있습니다. 비싼 RF 장비 없이도 연구를 직접 수행하고 재현할 수 있도록 오픈 도구와 시뮬레이터를 만들어 위성 해킹 시나리오를 구현하고 실증할 수 있도록 하는 등 소프트웨어 개발도 진행한 바 있습니다. 앞으로는 RF 링크를 넘어, 위성을 구동하는 소프트웨어 — 탑재(비행) 소프트웨어와 지상국 시스템 — 까지 위성 보안 전반으로 연구를 확장하고자 합니다."
         />
       </p>
@@ -105,9 +105,14 @@ import T from "../components/T.astro";
         </li>
         <li>
           <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
+          <strong>"A Practical Tool for Analyzing Security Threats in Satellite Communications."</strong>
+          Conference on Information Security and Cryptography — Summer
+          (CISC-S'25), Jun 2025.
+        </li>
+        <li>
+          <span class="cv-pub-flag" aria-label="Korea">🇰🇷</span>
           <strong>"Analysis of Security Threats in Satellite Control Communication Using the NOS3 Satellite System Simulator."</strong>
-          Conference on Information Security and Cryptography (CISC-W'24),
-          Nov 2024. ·
+          Review of KIISC (정보보호학회지), Vol. 35, No. 2, pp. 5–10, Apr 2025. ·
           <a
             class="paper-link"
             href="https://www.dbpia.co.kr/journal/articleDetail?nodeId=NODE12160174"
@@ -249,6 +254,16 @@ import T from "../components/T.astro";
       <h2>// <T en="Selected Projects" ko="주요 프로젝트" /></h2>
 
       <div class="cv-project">
+        <h4>MENKAR — Satellite System Virtualization</h4>
+        <p>
+          <T
+            en="Desktop application that virtualizes an entire satellite system — signal simulation, RF hardware virtualization, satellite virtualization, and a live link to the ground station on mrradio.kr — so a complete satellite RF link runs end to end, from a virtual spacecraft down to the ground station."
+            ko="MENKAR는 위성 시스템 전체를 하나의 Desktop app으로 구현한 소프트웨어입니다. VSA에 이어서 개인 프로젝트로 진행했으며 Signal simulation, RF hardware 가상화, Satellite 가상화, 그리고 mrradio.kr 플랫폼의 Ground Station과 실시간 연결까지 갖춰, 가상 위성에서 지상국에 이르는 완전한 위성 시스템이 end-to-end로 동작합니다."
+          />
+        </p>
+      </div>
+
+      <div class="cv-project">
         <h4>
           VSA / <a href="https://github.com/whal-e3/OpenVSA" target="_blank" rel="noopener">OpenVSA</a>
           — Virtual Satellite Antenna
@@ -291,8 +306,8 @@ import T from "../components/T.astro";
     <div class="cv-section">
       <h2>// <T en="Honors & Awards" ko="수상 경력" /></h2>
       <ul>
-        <li><span class="lang-en"><strong>AUTOCRYPT Special Award</strong> — Automotive Hacking Competition (AutoHack).</span><span class="lang-ko"><strong>AUTOCRYPT 특별상</strong> — 자동차 해킹 경진대회 (AutoHack).</span></li>
-        <li><span class="lang-en"><strong>Hacktaeon CTF Finalist</strong> — National CTF hosted by Sejong City.</span><span class="lang-ko"><strong>핵태온 CTF 본선 진출</strong> — 세종시 주최 전국 CTF.</span></li>
+        <li><span class="lang-en"><strong>AUTOCRYPT Special Award</strong> — Automotive Hacking Competition (AutoHack), EXCO Daegu finals, Nov 2024. Four-person Kyung Hee University team; hands-on CAN-bus vehicle control (door locks, wipers, headlights) and 433.92 MHz key-fob replay and jamming with a HackRF.</span><span class="lang-ko"><strong>AUTOCRYPT 특별상</strong> — 자동차 해킹·방어 경진대회 (AutoHack), 2024년 11월 대구 EXCO 본선. 경희대학교 4인 팀으로 참가해 실제 차량 CAN bus 제어(문 열기, 와이퍼·헤드라이트 작동)와 HackRF One을 이용한 433.92 MHz key-fob replay·jamming을 수행했습니다.</span></li>
+        <li><span class="lang-en"><strong>HackTheon Sejong — Finalist</strong> — international collegiate CTF hosted by Sejong City.</span><span class="lang-ko"><strong>핵태온 세종 본선 진출</strong> — 세종시 주최 국제 대학생 CTF.</span></li>
       </ul>
     </div>
 
