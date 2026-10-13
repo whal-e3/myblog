@@ -18,11 +18,12 @@ it is ignored by Git. In another terminal, start Astro:
 
 ```sh
 npm install
-npm run dev
+npm run dev -- --host 127.0.0.1
 ```
 
-Open `http://localhost:4321/blog/seoul-subway/` or
-`http://localhost:4321/miniprj/seoul-subway/`. Astro proxies the map files
+Open `http://127.0.0.1:4321/blog/seoul-subway/` or
+`http://127.0.0.1:4321/miniprj/seoul-subway/`. In this WSL setup, Windows
+Chrome may not reach Astro through the `localhost` hostname. Astro proxies the map files
 and `/api/live/*` to the Python server at `127.0.0.1:8787`, so the browser
 uses one origin. The source project's README has the feed's data and license
 details.
@@ -45,7 +46,7 @@ key. To view its API through the Astro map preview, keep the Python server
 running for the map assets and restart Astro with:
 
 ```sh
-SUBWAY_API_PROXY_TARGET=http://127.0.0.1:8788 npm run dev
+SUBWAY_API_PROXY_TARGET=http://127.0.0.1:8788 npm run dev -- --host 127.0.0.1
 ```
 
 Only the API proxy changes; the map remains at Astro's origin. Worker tests
