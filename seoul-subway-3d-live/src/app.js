@@ -191,7 +191,10 @@
       return function drawGPU(time){
       gl.clearColor(...rgb(mapTheme.background),1);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-      gl.depthMask(true);flatDraw(grid,rgba(mapTheme.grid,mapTheme.gridAlpha));flatDraw(water,rgba(mapTheme.water,.9),gl.TRIANGLES);flatDraw(waterEdges,rgba(mapTheme.waterEdge,mapTheme.waterEdgeAlpha));flatDraw(borders,rgba(mapTheme.boundary,mapTheme.boundaryAlpha));flatDraw(seoulOutline,rgba(mapTheme.seoul,mapTheme.seoulAlpha));
+      gl.depthMask(true);
+      if(state.mode!=='layers'){
+        flatDraw(grid,rgba(mapTheme.grid,mapTheme.gridAlpha));flatDraw(water,rgba(mapTheme.water,.9),gl.TRIANGLES);flatDraw(waterEdges,rgba(mapTheme.waterEdge,mapTheme.waterEdgeAlpha));flatDraw(borders,rgba(mapTheme.boundary,mapTheme.boundaryAlpha));flatDraw(seoulOutline,rgba(mapTheme.seoul,mapTheme.seoulAlpha));
+      }
       const transitions=[],stationData=[];projected=[];
       const baseRadius=baseRailRadius();
       const emph=currentEmphasis();
@@ -236,7 +239,7 @@
       function disc(x,y,r,color,alpha=1){c.globalAlpha=alpha;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();}
       function drawSurface(){
         c.globalAlpha=1;
-        c.beginPath();for(let n=-100;n<=110;n+=5){path([[n,-100],[n,110]],-.04);path([[-100,n],[110,n]],-.04);}c.strokeStyle=cssRGBA(mapTheme.grid,mapTheme.gridAlpha);c.lineWidth=.65;c.stroke();
+        if(state.mode!=='layers'){c.beginPath();for(let n=-100;n<=110;n+=5){path([[n,-100],[n,110]],-.04);path([[-100,n],[110,n]],-.04);}c.strokeStyle=cssRGBA(mapTheme.grid,mapTheme.gridAlpha);c.lineWidth=.65;c.stroke();}
         c.beginPath();const water=D.surface.waterTriangles;for(let i=0;i<water.length;i+=3){path(water.slice(i,i+3),.025);c.closePath();}c.fillStyle=mapTheme.water;c.fill();
         surfacePaths(D.surface.waterOutlines,.028,cssRGBA(mapTheme.waterEdge,mapTheme.waterEdgeAlpha),.65);surfacePaths(D.surface.boundaries,.04,cssRGBA(mapTheme.boundary,mapTheme.boundaryAlpha),.6);surfacePaths(D.surface.seoul,.06,cssRGBA(mapTheme.seoul,mapTheme.seoulAlpha),.9);
       }
@@ -252,7 +255,6 @@
           // Narrow reflected edge adds a small tubular highlight at close range.
           if(cam.scale<45){c.globalAlpha=lineOpacity(li)*.15;c.strokeStyle='#ffffff';c.lineWidth=.65;c.stroke();}
         }
-        if(state.mode==='layers')drawSurface();
         const pointRadius=cam.scale>80?1.5:cam.scale>35?1.9:2.4;
         for(const s of D.stations){const ls=activeLines(s);if(!ls.length)continue;const split=cam.spread>.025&&ls.length>1,alpha=stationOpacity(s);
           for(const li of (split?ls:[ls[0]])){const p=project(s.x,split?lineHeight(li):stationHeight(s),s.z);if(p.x<-20||p.x>width+20||p.y<-20||p.y>height+20)continue;projected.push({...p,s,line:li,alpha});
@@ -368,8 +370,63 @@
       const sizes=[.1,.2,.5,1,2,5,10,20,50];const km=sizes.reduce((best,n)=>Math.abs(n-goalKm)<Math.abs(best-goalKm)?n:best,1);
       $('scale-line').style.width=`${km/cam.scale*height}px`;$('scale-label').textContent=km<1?`${km*1000} m`:`${km} km`;
     }
+    const surfaceBounds=(()=>{
+      const b={minX:Infinity,maxX:-Infinity,minZ:Infinity,maxZ:-Infinity};
+      for(const paths of [D.surface.waterOutlines,D.surface.boundaries,D.surface.seoul])for(const path of paths)for(const [x,z] of path){
+        b.minX=Math.min(b.minX,x);b.maxX=Math.max(b.maxX,x);b.minZ=Math.min(b.minZ,z);b.maxZ=Math.max(b.maxZ,z);
+      }
+      return {minX:b.minX-2,maxX:b.maxX+2,minZ:b.minZ-2,maxZ:b.maxZ+2};
+    })();
+    const surfaceWater=new Path2D();
+    for(let i=0;i<D.surface.waterTriangles.length;i+=3){
+      const triangle=D.surface.waterTriangles;
+      surfaceWater.moveTo(triangle[i][0],triangle[i][1]);
+      surfaceWater.lineTo(triangle[i+1][0],triangle[i+1][1]);
+      surfaceWater.lineTo(triangle[i+2][0],triangle[i+2][1]);surfaceWater.closePath();
+    }
+    function drawSurfaceSheet(){
+      if(state.mode!=='layers')return;
+      const dark=window.SeoulTheme.current==='dark',b=surfaceBounds;
+      const halfX=Math.min((b.maxX-b.minX)*.43,Math.max(.25,cam.scale*aspect*.27));
+      const halfZ=Math.min((b.maxZ-b.minZ)*.43,Math.max(.25,cam.scale/Math.max(.2,Math.sin(cam.pitch))*.24));
+      const focus=pointUnderCursor(width/2,height/2,cam,.12);
+      const cx=clamp(focus.x,b.minX+halfX,b.maxX-halfX),cz=clamp(focus.z,b.minZ+halfZ,b.maxZ-halfZ);
+      const outer=[[b.minX,b.minZ],[b.maxX,b.minZ],[b.maxX,b.maxZ],[b.minX,b.maxZ]];
+      const inner=[[cx-halfX,cz-halfZ],[cx+halfX,cz-halfZ],[cx+halfX,cz+halfZ],[cx-halfX,cz+halfZ]];
+      const top=inner.map(([x,z])=>project(x,.12,z));
+      const depth=clamp(cam.scale/height*10/Math.max(.25,Math.cos(cam.pitch)),.05,3);
+      const lower=inner.map(([x,z])=>project(x,.12-depth,z));
+      const trace=(points,y)=>{for(let i=0;i<points.length;i++){const p=project(points[i][0],y,points[i][1]);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}ctx.closePath();};
+      const frame=()=>{trace(outer,.12);trace(inner,.12);};
+      ctx.save();
+      ctx.beginPath();frame();ctx.fillStyle=dark?'rgba(78,119,149,.72)':'rgba(176,207,227,.80)';ctx.fill('evenodd');
+      ctx.beginPath();frame();ctx.clip('evenodd');
+      ctx.save();
+      const waterY=.15;
+      ctx.setTransform(dpr*vp[0]*width/2,-dpr*vp[1]*height/2,dpr*vp[8]*width/2,-dpr*vp[9]*height/2,dpr*(1+vp[12]+vp[4]*waterY)*width/2,dpr*(1-vp[13]-vp[5]*waterY)*height/2);
+      ctx.fillStyle=dark?'rgba(23,64,92,.70)':'rgba(94,150,187,.52)';ctx.fill(surfaceWater);
+      ctx.restore();
+      ctx.lineWidth=.75;ctx.strokeStyle=dark?'rgba(209,232,247,.29)':'rgba(42,93,132,.22)';
+      ctx.beginPath();for(let n=-100;n<=110;n+=5){const a=project(n,.14,-100),d=project(n,.14,110),e=project(-100,.14,n),f=project(110,.14,n);ctx.moveTo(a.x,a.y);ctx.lineTo(d.x,d.y);ctx.moveTo(e.x,e.y);ctx.lineTo(f.x,f.y);}ctx.stroke();
+      const outline=(paths,y,color,lineWidth)=>{ctx.beginPath();for(const path of paths){for(let i=0;i<path.length;i++){const p=project(path[i][0],y,path[i][1]);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}}ctx.strokeStyle=color;ctx.lineWidth=lineWidth;ctx.stroke();};
+      outline(D.surface.waterOutlines,.16,dark?'rgba(202,231,248,.54)':'rgba(47,102,139,.45)',1.1);
+      outline(D.surface.boundaries,.17,dark?'rgba(200,224,239,.45)':'rgba(54,103,138,.40)',.8);
+      outline(D.surface.seoul,.18,dark?'rgba(233,245,253,.80)':'rgba(29,80,120,.70)',1.2);
+      ctx.restore();
+      ctx.save();
+      for(let i=0;i<4;i++){
+        const j=(i+1)%4;
+        ctx.beginPath();ctx.moveTo(top[i].x,top[i].y);ctx.lineTo(top[j].x,top[j].y);ctx.lineTo(lower[j].x,lower[j].y);ctx.lineTo(lower[i].x,lower[i].y);ctx.closePath();
+        ctx.fillStyle=dark?'rgba(17,43,64,.89)':'rgba(105,145,173,.87)';ctx.fill();
+      }
+      ctx.beginPath();trace(inner,.12);ctx.strokeStyle=dark?'#d4ebfa':'#376c91';ctx.lineWidth=2;ctx.stroke();
+      ctx.beginPath();trace(outer,.12);ctx.strokeStyle=dark?'rgba(173,216,240,.8)':'rgba(50,100,133,.65)';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.restore();
+      return {inner,top};
+    }
     function drawLabels(time){
       ctx.clearRect(0,0,width,height);
+      const cutaway=drawSurfaceSheet();
       const selected=focusedStation();
       if(selected && activeLines(selected).length){const p=project(selected.x,stationHeight(selected),selected.z);ctx.beginPath();ctx.arc(p.x,p.y,11+(state.motion?1.7*Math.sin(time*.003):0),0,Math.PI*2);ctx.strokeStyle=mapTheme.accent;ctx.lineWidth=1.3;ctx.stroke();}
       if(state.selectedTrain!==null){
@@ -392,6 +449,7 @@
       for(const s of candidates){
         if(labels.length>=maximum)break;
         if(!activeLines(s).length||stationOpacity(s)<.6)continue;
+        if(cutaway&&(s.x<cutaway.inner[0][0]||s.x>cutaway.inner[1][0]||s.z<cutaway.inner[0][1]||s.z>cutaway.inner[2][1]))continue;
         if(cam.scale>85&&!majorNames.includes(s.ko)&&s.lines.length<2)continue;
         if(cam.scale>30&&s.lines.length<2&&!majorNames.includes(s.ko)&&state.selectedLine===null&&s!==selected)continue;
         const p=project(s.x,stationHeight(s),s.z), text=s.ko;
@@ -405,7 +463,9 @@
         }
         if(!box)continue;boxes.push(box);labels.push({text,x:box.x+3,y:p.y,selected:s===selected,major:majorNames.includes(s.ko)});
       }
+      if(cutaway){ctx.save();ctx.beginPath();cutaway.top.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();}
       for(const l of labels){ctx.lineWidth=3.6;ctx.strokeStyle=mapTheme.background;ctx.strokeText(l.text,l.x,l.y);ctx.fillStyle=l.selected?mapTheme.selectedLabel:l.major?mapTheme.majorLabel:mapTheme.label;ctx.fillText(l.text,l.x,l.y);}
+      if(cutaway)ctx.restore();
     }
     const mini=$('minimap'),miniCtx=mini.getContext('2d');
     function showOverview(name){
@@ -602,9 +662,10 @@
     function zoom(factor){zoomAt(factor);}
     mini.addEventListener('click',e=>{releaseZoomAnchor();cancelFollow();const r=mini.getBoundingClientRect(),px=(e.clientX-r.left)*mini.width/r.width,py=(e.clientY-r.top)*mini.height/r.height,pr=miniProject(0,0);goal.x=(px-pr.x)/pr.scale;goal.z=(py-pr.y)/pr.scale;goal.scale=Math.min(goal.scale,35);state.scope='custom';updateScope();dirty=true;});
     function toggleOrbit(){releaseZoomAnchor();cancelFollow();state.orbit=!state.orbit;if(state.orbit&&state.mode==='top')setMode('3d');$('orbit').setAttribute('aria-pressed',String(state.orbit));$('orbit').classList.toggle('active',state.orbit);dirty=true;}
+    function rotateBy(amount){releaseZoomAnchor();stopAutomaticCamera();goal.yaw=cam.yaw+amount;dirty=true;}
     function home(){state.orbit=false;$('orbit').setAttribute('aria-pressed','false');$('orbit').classList.remove('active');showAll();setMode('3d');goal.yaw=-.19;fitAll(false,true);$('search').value='';$('results').hidden=true;closeMobile();}
     $('brand-home').onclick=home;$('nav-explore').onclick=home;$('scope-full').onclick=()=>{showAll();fitAll();};$('scope-core').onclick=core;$('fit').onclick=()=>fitAll();$('mini-reset').onclick=()=>{showAll();fitAll();};
-    $('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('north').onclick=()=>{releaseZoomAnchor();goal.yaw=0;dirty=true;};$('orbit').onclick=toggleOrbit;
+    $('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('north').onclick=()=>{releaseZoomAnchor();goal.yaw=0;dirty=true;};$('rotate-left').onclick=()=>rotateBy(-Math.PI/8);$('rotate-right').onclick=()=>rotateBy(Math.PI/8);$('orbit').onclick=toggleOrbit;
     $('show-all').onclick=showAll;$('show-none').onclick=()=>{state.visible.fill(false);updateVisibility();};$('restore').onclick=()=>{showAll();fitAll();};
     $('labels-toggle').onchange=e=>{state.labels=e.target.checked;dirty=true;};
     $('motion-toggle').onchange=e=>setMotion(e.target.checked);
