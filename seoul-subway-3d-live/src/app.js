@@ -52,7 +52,11 @@
     const stationPriority=s=>(state.selectedStation===s.id?100000:0)+(majorNames.includes(s.ko)?200:0)+s.lines.length*12+(s.transliterated?0:2);
     const sortedStations=[...D.stations].sort((a,b)=>stationPriority(b)-stationPriority(a));
     const layers=D.lines.map((_,i)=>i*.78);
-    const lineHeight = i => .32+layers[i]*cam.spread;
+    // In exploded view the surface stays at y=0 and every rail layer sits below it.
+    // Other views retain their existing above-surface rendering.
+    const lineLevel = (i,spread) => (state.mode==='layers'?-1:1)*(.32+layers[i]*spread);
+    const lineHeight = i => lineLevel(i,cam.spread);
+    const layerMidpoint = spread => state.mode==='layers'?-(.32+layers[layers.length-1]*spread/2):0;
     const activeLines = s=>s.lines.filter(l=>state.visible[l]);
     const stationHeight = s=> {const a=activeLines(s);return a.length?Math.max(...a.map(lineHeight)):.32;};
     const focusedStation = () => state.selectedStation===null?null:lookup.get(state.selectedStation);
@@ -230,11 +234,15 @@
       function path(points,y){for(let j=0;j<points.length;j++){const p=project(points[j][0],y,points[j][1]);if(j)c.lineTo(p.x,p.y);else c.moveTo(p.x,p.y);}}
       function surfacePaths(paths,y,color,lineWidth){c.beginPath();for(const p of paths)path(p,y);c.strokeStyle=color;c.lineWidth=lineWidth;c.stroke();}
       function disc(x,y,r,color,alpha=1){c.globalAlpha=alpha;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();}
-      return function drawSoftware(time){
-        c.setTransform(dpr,0,0,dpr,0,0);c.globalAlpha=1;c.fillStyle=mapTheme.background;c.fillRect(0,0,width,height);c.lineJoin='round';c.lineCap='round';
+      function drawSurface(){
+        c.globalAlpha=1;
         c.beginPath();for(let n=-100;n<=110;n+=5){path([[n,-100],[n,110]],-.04);path([[-100,n],[110,n]],-.04);}c.strokeStyle=cssRGBA(mapTheme.grid,mapTheme.gridAlpha);c.lineWidth=.65;c.stroke();
         c.beginPath();const water=D.surface.waterTriangles;for(let i=0;i<water.length;i+=3){path(water.slice(i,i+3),.025);c.closePath();}c.fillStyle=mapTheme.water;c.fill();
         surfacePaths(D.surface.waterOutlines,.028,cssRGBA(mapTheme.waterEdge,mapTheme.waterEdgeAlpha),.65);surfacePaths(D.surface.boundaries,.04,cssRGBA(mapTheme.boundary,mapTheme.boundaryAlpha),.6);surfacePaths(D.surface.seoul,.06,cssRGBA(mapTheme.seoul,mapTheme.seoulAlpha),.9);
+      }
+      return function drawSoftware(time){
+        c.setTransform(dpr,0,0,dpr,0,0);c.globalAlpha=1;c.fillStyle=mapTheme.background;c.fillRect(0,0,width,height);c.lineJoin='round';c.lineCap='round';
+        if(state.mode!=='layers')drawSurface();
         projected=[];
         if(cam.spread>.025){c.beginPath();for(const s of D.stations){const ls=activeLines(s);if(ls.length<2)continue;const hs=ls.map(lineHeight),a=project(s.x,Math.min(...hs),s.z),b=project(s.x,Math.max(...hs),s.z);c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);}c.strokeStyle=cssRGBA(mapTheme.connector,mapTheme.connectorAlpha);c.lineWidth=.8;c.stroke();}
         const order=D.lines.map((_,i)=>i).sort((a,b)=>lineOpacity(a)-lineOpacity(b)||lineHeight(a)-lineHeight(b));
@@ -244,6 +252,7 @@
           // Narrow reflected edge adds a small tubular highlight at close range.
           if(cam.scale<45){c.globalAlpha=lineOpacity(li)*.15;c.strokeStyle='#ffffff';c.lineWidth=.65;c.stroke();}
         }
+        if(state.mode==='layers')drawSurface();
         const pointRadius=cam.scale>80?1.5:cam.scale>35?1.9:2.4;
         for(const s of D.stations){const ls=activeLines(s);if(!ls.length)continue;const split=cam.spread>.025&&ls.length>1,alpha=stationOpacity(s);
           for(const li of (split?ls:[ls[0]])){const p=project(s.x,split?lineHeight(li):stationHeight(s),s.z);if(p.x<-20||p.x>width+20||p.y<-20||p.y>height+20)continue;projected.push({...p,s,line:li,alpha});
@@ -306,13 +315,17 @@
     function visibleStations(){return D.stations.filter(s=>s.lines.some(i=>state.visible[i]));}
     function fitStations(stations,instant=false){
       releaseZoomAnchor();if(!stations.length)return;
-      let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
-      for(const s of stations){minX=Math.min(minX,s.x);maxX=Math.max(maxX,s.x);minZ=Math.min(minZ,s.z);maxZ=Math.max(maxZ,s.z);}
-      goal.x=(minX+maxX)/2;goal.z=(minZ+maxZ)/2;goal.y=state.mode==='layers'?8*state.separation:0;
+      let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity,minY=Infinity,maxY=-Infinity;
+      for(const s of stations){
+        minX=Math.min(minX,s.x);maxX=Math.max(maxX,s.x);minZ=Math.min(minZ,s.z);maxZ=Math.max(maxZ,s.z);
+        for(const li of s.lines.filter(i=>state.visible[i])){const y=lineLevel(li,goal.spread);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+      }
+      goal.x=(minX+maxX)/2;goal.z=(minZ+maxZ)/2;
+      goal.y=state.mode==='layers'&&Number.isFinite(minY)?(minY+maxY)/2:0;
       let minR=Infinity,maxR=-Infinity,minU=Infinity,maxU=-Infinity;
       const cy=Math.cos(goal.yaw),sy=Math.sin(goal.yaw),sp=Math.sin(goal.pitch),cp=Math.cos(goal.pitch);
       for(const s of stations)for(const li of s.lines.filter(i=>state.visible[i])){
-        const dx=s.x-goal.x,dz=s.z-goal.z,dy=.32+layers[li]*goal.spread-goal.y;
+        const dx=s.x-goal.x,dz=s.z-goal.z,dy=lineLevel(li,goal.spread)-goal.y;
         const r=cy*dx-sy*dz,u=-sy*sp*dx+cp*dy-cy*sp*dz;
         minR=Math.min(minR,r);maxR=Math.max(maxR,r);minU=Math.min(minU,u);maxU=Math.max(maxU,u);
       }
@@ -326,10 +339,15 @@
       dirty=true;
     }
     function fitAll(instant=false,reset=false){cancelFollow();if(reset){goal.yaw=-.19;goal.pitch=state.mode==='top'?Math.PI/2:.97;}state.scope='full';updateScope();fitStations(visibleStations(),instant);}
-    function core(){releaseZoomAnchor();resetTrain();state.scope='core';state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();updateScope();goal.x=0;goal.z=-2;goal.y=state.mode==='layers'?6:0;goal.scale=width<600?49:37;dirty=true;}
+    function core(){releaseZoomAnchor();resetTrain();state.scope='core';state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();updateScope();goal.x=0;goal.z=-2;goal.y=layerMidpoint(goal.spread);goal.scale=width<600?49:37;dirty=true;}
     function updateScope(){
       $('scope-full').classList.toggle('active',state.scope==='full');$('scope-core').classList.toggle('active',state.scope==='core');
       let text=state.scope==='core'?'A closer look at the heart of Seoul':state.scope==='full'?'The full network, in perspective':'Explore Seoul at your own scale';
+      if(state.mode==='layers'){
+        if(state.scope==='full')text='Surface above illustrative rail layers';
+        else if(state.scope==='core')text='Seoul core · surface above rail layers';
+        else text='Surface above illustrative rail layers';
+      }
       if(state.scope==='custom'){
         if(state.selectedTrain!==null)text=D.lines[fleet.trains[state.selectedTrain].line].name+' · 3D rolling stock';
         else if(state.selectedStation!==null){const s=lookup.get(state.selectedStation);text=s.ko+' · '+s.en;}
@@ -390,9 +408,28 @@
       for(const l of labels){ctx.lineWidth=3.6;ctx.strokeStyle=mapTheme.background;ctx.strokeText(l.text,l.x,l.y);ctx.fillStyle=l.selected?mapTheme.selectedLabel:l.major?mapTheme.majorLabel:mapTheme.label;ctx.fillText(l.text,l.x,l.y);}
     }
     const mini=$('minimap'),miniCtx=mini.getContext('2d');
+    function showOverview(name){
+      for(const part of ['korea','network']){
+        const active=part===name,tab=$(`overview-${part}-tab`);
+        $(`overview-${part}`).hidden=!active;
+        tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;
+      }
+      dirty=true;
+    }
+    for(const part of ['korea','network']){
+      const tab=$(`overview-${part}-tab`);
+      tab.addEventListener('click',()=>showOverview(part));
+      tab.addEventListener('keydown',event=>{
+        if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+        event.preventDefault();
+        const next=event.key==='Home'?'korea':event.key==='End'?'network':part==='korea'?'network':'korea';
+        showOverview(next);$(`overview-${next}-tab`).focus();
+      });
+    }
     const allBounds={minX:Math.min(...D.stations.map(s=>s.x))-4,maxX:Math.max(...D.stations.map(s=>s.x))+4,minZ:Math.min(...D.stations.map(s=>s.z))-4,maxZ:Math.max(...D.stations.map(s=>s.z))+4};
     function miniProject(x,z){const scale=Math.min((mini.width-14)/(allBounds.maxX-allBounds.minX),(mini.height-12)/(allBounds.maxZ-allBounds.minZ));return{x:mini.width/2+(x-(allBounds.minX+allBounds.maxX)/2)*scale,y:mini.height/2+(z-(allBounds.minZ+allBounds.maxZ)/2)*scale,scale};}
     function drawMini(){
+      if($('overview-network').hidden)return;
       miniCtx.clearRect(0,0,mini.width,mini.height);miniCtx.lineWidth=.7;
       for(const e of D.segments){miniCtx.beginPath();for(let i=0;i<e.points.length;i++){const p=miniProject(...e.points[i]);i?miniCtx.lineTo(p.x,p.y):miniCtx.moveTo(p.x,p.y);}miniCtx.strokeStyle=state.visible[e.line]?(state.selectedLine===e.line?D.lines[e.line].color:D.lines[e.line].color):mapTheme.miniMuted;miniCtx.globalAlpha=state.visible[e.line]?.65:.3;miniCtx.stroke();}
       miniCtx.globalAlpha=1;const c=miniProject(cam.x,cam.z),w=cam.scale*aspect*c.scale,h=cam.scale*c.scale/Math.max(.3,Math.sin(cam.pitch));
@@ -489,11 +526,12 @@
     $('results').addEventListener('click',e=>{const b=e.target.closest('[data-station]');if(b)selectStation(+b.dataset.station);});
     document.addEventListener('pointerdown',e=>{if(!e.target.closest('.search-wrap')&&!e.target.closest('#results'))$('results').hidden=true;});
     function setMode(mode){
-      releaseZoomAnchor();state.mode=mode;goal.spread=mode==='layers'?state.separation:mode==='3d'?.12:0;goal.pitch=mode==='top'?Math.PI/2:mode==='layers'?.68:.97;
+      releaseZoomAnchor();state.mode=mode;goal.spread=mode==='layers'?state.separation:mode==='3d'?.12:0;goal.pitch=mode==='top'?Math.PI/2:mode==='layers'?.46:.97;
       if(mode==='top'){goal.yaw=0;state.orbit=false;$('orbit').setAttribute('aria-pressed','false');}
       for(const m of ['3d','top','layers']){$(`mode-${m}`).classList.toggle('active',mode===m);$(`mode-${m}`).setAttribute('aria-pressed',String(mode===m));}
       $('layer-control').hidden=mode!=='layers';$('orbit').classList.toggle('active',state.orbit);
-      if(state.scope==='full')fitAll();else if(state.selectedLine!==null)fitStations(D.stations.filter(s=>s.lines.includes(state.selectedLine)));else goal.y=mode==='layers'?6:0;
+      if(state.scope==='full')fitAll();else if(state.selectedLine!==null)fitStations(D.stations.filter(s=>s.lines.includes(state.selectedLine)));else goal.y=layerMidpoint(goal.spread);
+      updateScope();
       dirty=true;
     }
     // Map-style navigation: left/one-finger drag pans; right/Shift drag rotates. Two fingers pan + pinch.
@@ -584,7 +622,7 @@
     preview.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')){e.preventDefault();previewYaw+=e.key==='ArrowLeft'?.14:e.key==='ArrowRight'?-.14:0;previewPitch=clamp(previewPitch+(e.key==='ArrowUp'?.10:e.key==='ArrowDown'?-.10:0),.10,1.4);updateTrainCard();}});
     setMotion(state.motion);
     ['3d','top','layers'].forEach(m=>$(`mode-${m}`).onclick=()=>setMode(m));
-    $('separation').oninput=e=>{releaseZoomAnchor();state.separation=+e.target.value/100;goal.spread=state.separation;$('separation-output').textContent=`${e.target.value}%`;dirty=true;};
+    $('separation').oninput=e=>{releaseZoomAnchor();state.separation=+e.target.value/100;goal.spread=state.separation;goal.y=layerMidpoint(goal.spread);$('separation-output').textContent=`${e.target.value}%`;dirty=true;};
     $('mobile-menu').onclick=()=>{const open=$('sidebar').classList.toggle('open');$('mobile-menu').setAttribute('aria-expanded',String(open));};
     $('fullscreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else toast('Use your browser’s fullscreen control.');}catch{toast('Fullscreen is not available in this browser context.');}};
     const dialog=$('about-dialog');for(const id of ['nav-about','small-about','map-about','help'])$(id).onclick=()=>dialog.showModal();$('close-about').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});

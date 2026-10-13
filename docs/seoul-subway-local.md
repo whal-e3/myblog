@@ -1,8 +1,9 @@
 # Seoul subway local preview
 
-The subway map is a draft hobby project. It is previewed at
-`/miniprj/seoul-subway/`, linked from the draft post at `/blog/seoul-subway/`.
-The normal blog build does not copy the map or publish the draft.
+The subway map is a hobby project previewed at `/miniprj/seoul-subway/`.
+Its post at `/blog/seoul-subway/` appears in the Blog listing and in normal
+blog builds. The map assets still require the separate release staging step;
+the normal blog build does not copy them.
 
 From the blog repository root, start the local Python server in one terminal:
 
@@ -56,7 +57,9 @@ use synthetic fixtures and do not contact Seoul's service.
 
 Do not run the asset staging command as part of normal development or build.
 For the later publication session, after a normal build, the explicit command
-`node scripts/stage-subway.mjs --out dist` copies only the nine approved map
-files into `dist/miniprj/seoul-subway/`. It does not copy `.env`, Python code,
+`node scripts/stage-subway.mjs --out dist` copies only the approved map files
+into `dist/miniprj/seoul-subway/`. It does not copy `.env`, Python code,
 or test artifacts. The production Worker has no subway binding or enable flag,
-and this branch is for local development only.
+and this branch is for local development only. Do not deploy this branch before
+the map assets and live feed are ready, because the now-visible post links to
+the map path.

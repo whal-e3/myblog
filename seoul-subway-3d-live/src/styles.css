@@ -181,3 +181,46 @@ html[data-theme="dark"] .coverage-wrap td:last-child{color:var(--muted)}
 html[data-theme="dark"] .coverage-wrap td:nth-child(2){color:var(--accent)}
 html[data-theme="dark"] :is(#live-diagnostics,#dialog-budget){color:var(--muted)}
 html[data-theme="dark"] .appearance-setting select{background:var(--surface);border-color:#48617c}
+
+/* Geographic context and the original interactive network overview share one inset. */
+.locator-wrap{width:176px;background:#f8fbffef;border-color:#c8dceb;box-shadow:0 7px 23px #16456e17}
+.locator-wrap>.overview-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:3px;border-bottom:1px solid #d8e5f0;letter-spacing:0}
+.overview-tabs button{min-width:0;padding:6px 1px;border-radius:3px;font-size:8px;font-weight:700;letter-spacing:.7px;color:#647f9a}
+.overview-tabs button:hover{background:#eaf2fa;color:#0052a4}
+.overview-tabs button[aria-selected="true"]{background:#e3f0fb;color:#0052a4}
+.locator-wrap>.overview-panel{display:block;padding:0;letter-spacing:0;color:inherit}
+.locator-map{display:block;width:100%;height:auto;background:linear-gradient(180deg,#f5faff,#e8f2fb);stroke:none}
+.locator-grid{fill:none;stroke:#d9e8f5;stroke-width:.55}
+.locator-land{fill:#aec8dc;stroke:#7799b5;stroke-width:.65;stroke-linejoin:round}
+.locator-callout{fill:none;stroke:#0052a4;stroke-width:.9}
+.locator-halo{fill:#fff;stroke:#0052a4;stroke-width:1.2}
+.locator-dot{fill:#0052a4;stroke:none}
+.locator-city{fill:#0052a4;stroke:none;font:700 8px 'Segoe UI',Arial,sans-serif;letter-spacing:1px}
+.locator-caption{display:flex;align-items:center;justify-content:space-between;gap:3px;padding:5px 8px 6px;border-top:1px solid #d6e4f1;font-size:7px;color:#6887a3;white-space:nowrap}
+.locator-caption b{font-size:7px;color:#0052a4}
+.network-overview-label{display:flex;justify-content:space-between;padding:9px 9px 1px;font-size:7px;letter-spacing:.8px;color:#6887a3}
+.locator-wrap .overview-network canvas{width:100%;height:auto;display:block}
+.overview-network>button{display:flex;justify-content:space-between;width:100%;padding:7px 9px;border-top:1px solid #d6e4f1;color:#52769b;font-size:8px}
+.overview-network>button:hover{background:#eaf3fb}
+html[data-theme="dark"] .locator-wrap{background:#102338ed;border-color:#365571;box-shadow:0 10px 25px #0006}
+html[data-theme="dark"] .locator-wrap>.overview-tabs{border-color:#34516d}
+html[data-theme="dark"] .overview-tabs button{color:#9db8d1}
+html[data-theme="dark"] .overview-tabs button:hover,html[data-theme="dark"] .overview-tabs button[aria-selected="true"]{background:#204465;color:#b9ddfa}
+html[data-theme="dark"] .locator-map{background:linear-gradient(180deg,#142e47,#10253b)}
+html[data-theme="dark"] .locator-grid{stroke:#315371}
+html[data-theme="dark"] .locator-land{fill:#4c7291;stroke:#91b4d0}
+html[data-theme="dark"] .locator-callout,html[data-theme="dark"] .locator-halo{stroke:#8fcaff}
+html[data-theme="dark"] .locator-halo{fill:#112d47}
+html[data-theme="dark"] .locator-dot{fill:#8fcaff}
+html[data-theme="dark"] .locator-city,html[data-theme="dark"] .locator-caption b{fill:#b5ddff;color:#b5ddff}
+html[data-theme="dark"] .locator-caption,html[data-theme="dark"] .overview-network>button{border-color:#34516d;color:#a7c3dc}
+html[data-theme="dark"] .network-overview-label{color:#a7c3dc}
+html[data-theme="dark"] .overview-network>button:hover{background:#1d3954}
+@media(max-width:780px){
+  .locator-wrap{display:block;top:166px;bottom:auto;left:19px;right:auto;width:124px;z-index:4}
+  .overview-tabs button{font-size:7px;padding:5px 0}
+  .locator-caption{font-size:6px;padding:4px 5px}
+  .network-overview-label{font-size:6px;padding:6px 5px 1px}
+  .overview-network>button{font-size:7px;padding:5px}
+}
+@media(max-width:780px) and (max-height:540px){.locator-wrap{top:153px;width:105px}}

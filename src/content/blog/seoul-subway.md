@@ -2,14 +2,14 @@
 title: "Seoul Subway in 3D"
 description: "An interactive hobby map of Seoul's subway network with station-level live reports for Line 2."
 date: 2026-10-14
-draft: true
+draft: false
 tags:
   - hobby
   - visualization
 comments: false
 ---
 
-I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. You can explore 24 mapped lines and 659 stations in 3D, search for stations, and switch between network views.
+I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. You can explore 24 mapped lines and 659 stations in 3D, search for stations, and switch between network views. A Korea locator shows where this Seoul-area network sits on the peninsula.
 
 Line 2 can also show live train reports from Seoul's official `realtimePosition` API. Each report names a station and a report time; it is **not GPS tracking or an arrival prediction**. The rest of the network remains explorable even when the live feed is unavailable.
 
