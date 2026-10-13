@@ -1,0 +1,25 @@
+# Local-only Worker configuration for the Seoul Line 2 feed.
+# Run against an existing Astro dist/: wrangler dev --config wrangler.subway-dev.toml --port 8788
+# Do not deploy this configuration. The production wrangler.toml stays unchanged.
+name = "sunhyuksblog-subway-dev"
+main = "src/worker/index.ts"
+compatibility_date = "2026-02-20"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+run_worker_first = true
+not_found_handling = "404-page"
+
+[vars]
+GITHUB_REPO = "whal-e3/myblog"
+SITE_ORIGIN = "https://sunhyuk.dev"
+SUBWAY_DEV_ENABLED = "true"
+
+[[durable_objects.bindings]]
+name = "SEOUL_LINE2_FEED"
+class_name = "SeoulLine2Feed"
+
+[[migrations]]
+tag = "seoul-line2-v1"
+new_sqlite_classes = ["SeoulLine2Feed"]

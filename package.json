@@ -5,6 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "dev:subway-worker": "wrangler dev --config wrangler.subway-dev.toml --port 8788",
+    "test:subway-worker": "node --test src/worker/subway-feed.test.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "qr": "node scripts/gen-qr.mjs"
@@ -20,6 +22,8 @@
     "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "qrcode": "^1.5.4"
+    "esbuild": "^0.28.2",
+    "qrcode": "^1.5.4",
+    "wrangler": "^4.150.0"
   }
 }

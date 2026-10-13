@@ -5,10 +5,13 @@ import Sidebar from "../../components/Sidebar.astro";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
-  return posts.map((post) => ({
-    params: { slug: post.id },
-    props: post,
-  }));
+  const now = new Date();
+  return posts
+    .filter((post) => import.meta.env.DEV || (!post.data.draft && (!post.data.publishDate || post.data.publishDate <= now)))
+    .map((post) => ({
+      params: { slug: post.id },
+      props: post,
+    }));
 }
 
 const post = Astro.props;
