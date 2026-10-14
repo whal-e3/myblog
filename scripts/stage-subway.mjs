@@ -16,6 +16,7 @@ const files = [
   'src/live.js',
   'src/app.js',
   'data/network.js',
+  'data/korea.js',
   'LICENSE',
   'LICENSE-DATA.md',
 ];

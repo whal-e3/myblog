@@ -286,7 +286,7 @@ class LocalHTTPTests(unittest.TestCase):
   with urlopen(self.url+'/api/live/status') as r:
    self.assertFalse(json.load(r)['configured']);self.assertEqual(r.headers['Cache-Control'],'no-store');self.assertIn("connect-src 'self'",r.headers['Content-Security-Policy'])
  def test_static_assets(self):
-  for route in ['/','/src/live.js','/src/trains.js','/src/app.js','/src/styles.css','/data/network.js']:
+  for route in ['/','/src/live.js','/src/trains.js','/src/app.js','/src/styles.css','/data/network.js','/data/korea.js']:
    with urlopen(self.url+route) as r:self.assertEqual(r.status,200)
  def test_secret_files_not_served(self):
   for route in ['/.env','/.env.example','/.runtime/api-usage.json','/server.py','/server/feed.py','/%2e%2e/.env']:

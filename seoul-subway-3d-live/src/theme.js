@@ -18,24 +18,24 @@
   // These palettes affect the ground plane, labels, selection, and export only.
   const palettes = Object.freeze({
     light: Object.freeze({
-      background: '#f3f7fc', grid: '#678cba', gridAlpha: .075,
+      background: '#eaf4fa', land: '#e8efe6', coast: '#527d84', coastAlpha: .9,
       water: '#c4ddf3', waterEdge: '#7ba9d0', waterEdgeAlpha: .35,
       boundary: '#6b8daf', boundaryAlpha: .10, seoul: '#4276a5', seoulAlpha: .40,
       connector: '#507dab', connectorAlpha: .33, trackCasing: '#ffffffd9',
       stationCenter: '#f8fbff', stationRing: '#173f6d', stationFill: '#ffffff',
       accent: '#0052a4', selectedLabel: '#003c7e', cityLabel: '#718fae',
       majorLabel: '#285279', label: '#57718c', miniMuted: '#c8d6e5',
-      miniFill: '#0052a40d', exportText: '#53708f', previewGrid: '#0052a438'
+      miniFill: '#0052a40d', exportText: '#53708f'
     }),
     dark: Object.freeze({
-      background: '#081726', grid: '#6691bd', gridAlpha: .14,
+      background: '#081726', land: '#17383d', coast: '#8eb9ae', coastAlpha: .85,
       water: '#143751', waterEdge: '#44759d', waterEdgeAlpha: .46,
       boundary: '#6484a3', boundaryAlpha: .16, seoul: '#6d9ac3', seoulAlpha: .48,
       connector: '#85abd0', connectorAlpha: .43, trackCasing: '#aaccec25',
       stationCenter: '#dbeeff', stationRing: '#dbeeff', stationFill: '#0c2035',
       accent: '#78bcff', selectedLabel: '#9ad0ff', cityLabel: '#809cb8',
       majorLabel: '#d6e5f5', label: '#a9bfd5', miniMuted: '#314b65',
-      miniFill: '#78bcff18', exportText: '#a9bfd5', previewGrid: '#78bcff32'
+      miniFill: '#78bcff18', exportText: '#a9bfd5'
     })
   });
   let current = preference === 'system' ? (system.matches ? 'dark' : 'light') : preference;

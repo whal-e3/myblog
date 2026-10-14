@@ -86,7 +86,7 @@ with sync_playwright() as p:
           for(let i=0;i<pixels.length;i+=4){const k=[pixels[i],pixels[i+1],pixels[i+2]].join(',');counts.set(k,(counts.get(k)||0)+1)}
           return {kind:'canvas',color:[...counts].sort((a,b)=>b[1]-a[1])[0][0].split(',').map(Number)};
         }''')
-        expected=[8,23,38] if theme=='dark' else [243,247,252]
+        expected=[8,23,38] if theme=='dark' else [234,244,250]
         actual=[round(v*255) for v in pixels['color'][:3]] if pixels['kind']=='webgl' else pixels['color'][:3]
         assert actual==expected,(theme,actual,expected)
     record('map-palette-and-camera-preserved')
@@ -152,9 +152,32 @@ with sync_playwright() as p:
 
     animated=load(browser,reduced_motion=False)
     assert animated.locator('#mode-layers').count()==0
+    start=animated.evaluate('''()=>{
+      const a=__SEOUL_APP__,i=a.getIntro();
+      return {from:i?.from.scale,to:i?.to.scale,pitch:i?.from.pitch,
+              rings:a.korea.rings.length,triangles:a.korea.triangles.length};
+    }''')
+    assert start['rings']>=50 and start['triangles']>=800,start
+    assert start['from']>600 and start['to']<260,start
+    assert abs(start['pitch']-3.141592653589793/2)<.01,start
     assert animated.evaluate('__SEOUL_APP__.cam.pitch')>1.35
     animated.wait_for_function('Math.abs(__SEOUL_APP__.cam.pitch-.72)<.02',timeout=6500)
-    record('single-view-intro-tilts-from-overhead-to-3d')
+    assert animated.evaluate('__SEOUL_APP__.cam.scale')<260
+    record('full-south-korea-intro-zooms-to-3d-network')
+    animated.click('#scope-country')
+    animated.wait_for_function('Math.abs(__SEOUL_APP__.cam.pitch-Math.PI/2)<.02 && __SEOUL_APP__.cam.scale>600')
+    country=animated.evaluate('''()=>{
+      const a=__SEOUL_APP__,b=a.korea.bounds,v=document.querySelector('#viewport');
+      return {view:[v.clientWidth,v.clientHeight],corners:[
+        a.project(b.minX,0,b.minZ),a.project(b.minX,0,b.maxZ),
+        a.project(b.maxX,0,b.minZ),a.project(b.maxX,0,b.maxZ)]};
+    }''')
+    assert all(0<p['x']<country['view'][0] and 0<p['y']<country['view'][1]
+               for p in country['corners']),country
+    assert animated.locator('#scope-country').get_attribute('class')=='active'
+    assert animated.locator('#viewport').get_attribute('class').find('country-scope')>=0
+    assert animated.locator('.live-notice').is_hidden()
+    record('country-control-fits-full-geographic-outline')
     animated.close()
     interrupted=load(browser,reduced_motion=False)
     interrupted.click('#rotate-right')

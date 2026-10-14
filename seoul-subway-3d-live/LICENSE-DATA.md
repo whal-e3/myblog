@@ -37,6 +37,24 @@ https://www.kogl.or.kr/info/license.do
 Boundary layers remain separately licensed and are not relicensed under MIT.
 The original upstream basemap includes the source attribution metadata.
 
+## South Korea land layer
+
+The full country shape in `data/korea.js` uses the South Korea (`KOR`) polygons
+from **Natural Earth 1:10m Admin-0 Countries**:
+https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/
+
+The source GeoJSON is pinned to `nvkelso/natural-earth-vector` commit
+`ca96624a56bd078437bca8184e78163e5039ad19`:
+https://github.com/nvkelso/natural-earth-vector/blob/ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_10m_admin_0_countries.geojson
+
+`tools/prepare_korea.py` verifies the pinned source SHA-256, extracts all 53
+South Korea polygons (including Jeju, Ulleungdo and smaller islands), projects
+them into the network's x/z kilometre coordinates, and simplifies the outlines
+by at most 1 km while retaining small-island detail. It pre-triangulates the
+concave polygons for the 3D renderer. The shape is a geographic backdrop, not
+terrain height or a precise administrative survey. Natural Earth data is
+**public domain**: https://www.naturalearthdata.com/about/terms-of-use/
+
 ## Station metadata
 
 The upstream source also credits Wikidata, CC0.

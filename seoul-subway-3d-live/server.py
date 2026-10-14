@@ -36,7 +36,7 @@ def load_env(path: Path):
 
 def create_server(root: Path, feed: FeedClient, port: int):
     # Explicit assets only. Never expose .env, runtime files, server code, or directory listings.
-    assets = {name: root/name for name in ['index.html', 'src/styles.css', 'src/theme.js', 'src/app.js', 'src/trains.js', 'src/live.js', 'data/network.js']}
+    assets = {name: root/name for name in ['index.html', 'src/styles.css', 'src/theme.js', 'src/app.js', 'src/trains.js', 'src/live.js', 'data/network.js', 'data/korea.js']}
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'SeoulSubsurface'

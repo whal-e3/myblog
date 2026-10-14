@@ -175,8 +175,6 @@
     const minX=Math.min(...bounds.map(p=>p.x)),maxX=Math.max(...bounds.map(p=>p.x)),minY=Math.min(...bounds.map(p=>p.y)),maxY=Math.max(...bounds.map(p=>p.y));
     const scale=Math.min((w-24)/(maxX-minX||1),(h-32)/(maxY-minY||1));
     const project=(x,y,z)=>{const p=raw(x,y,z);return{x:w/2+(p.x-(minX+maxX)/2)*scale,y:h/2+6+(p.y-(minY+maxY)/2)*scale,depth:p.depth};};
-    c.strokeStyle=window.SeoulTheme?.palette.previewGrid||'#0052a438';c.lineWidth=.7;
-    for(let n=-7;n<=7;n++){for(const axis of [0,1]){const a=project(axis?n:-2,-.05,axis?-7:n),b=project(axis?n:2,-.05,axis?7:n);c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke();}}
     drawSoftware(c,inst,project,eye,{w,h});
   }
   window.SeoulTrains={CAR_LENGTH,SPACING,CAR_COUNT,models,sample,transformed,drawSoftware,createGPURenderer,preview,rgb};

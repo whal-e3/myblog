@@ -1,15 +1,16 @@
 # Seoul Subsurface — live-report edition with dark mode
 
-A three-dimensional atlas of the Seoul metropolitan subway with a Seoul Metro–inspired
-blue-and-white / navy-dark interface, source route colors, pan-first navigation, and an official
-TOPIS train-position connector. No third-party JavaScript, CDN assets, accounts in the
+A three-dimensional atlas of the Seoul metropolitan subway with a full South Korea
+land backdrop, a Seoul Metro–inspired blue-and-white / navy-dark interface, source route
+colors, pan-first navigation, and an official TOPIS train-position connector. No third-party JavaScript, CDN assets, accounts in the
 app, analytics, npm packages, or downloaded train models.
 
 **Live tracking requires your own approved Seoul realtime-subway API key and an internet
 connection. No key is included. Without one, the network remains usable but no trains
-are invented or shown as live.** A limited five-record Line 2 diagnostic succeeded with
-an approved key. The complete-line connector has been tested with synthetic fixtures;
-its local runtime and public hosting have not yet been verified against the live feed.
+are invented or shown as live.** The approved key returned complete provider-reported
+snapshots for the 19 supported routes during a local survey on 2026-10-14. This does
+not establish that the provider reports every operating train. Public hosting has not
+been verified against the feed.
 
 ## Dark mode and upgrading an existing installation
 
@@ -31,7 +32,7 @@ browser; the local-server version provides a normal, stable site origin.
 to a new folder, copy your existing **`.env`** into that folder, and run
 **`start-windows.bat`** (or `python server.py --open`). Do not overwrite your saved key
 with `.env.example`. Refresh the browser after restarting. No new API key is needed.
-The new `src/theme.js` is also on the server's explicit asset allowlist; use the new
+The `src/theme.js` and `data/korea.js` assets are on the server's explicit allowlist; use the new
 `server.py` as well as the updated frontend. Script CSP restrictions are unchanged.
 
 ## Start on Windows
@@ -99,8 +100,11 @@ per-client limits, and a shared server-side feed cache.
 
 ## Navigation and visual design
 
-- The map opens from above and slowly tilts into a 3D view. Moving the map interrupts
-  this introduction. Reduced-motion settings skip the animation.
+- The map opens above the full South Korea outline, then zooms toward the Seoul-area
+  subway network and tilts into its 3D view. **South Korea** returns to the national
+  view; **Network** fits the rail network, and **Seoul** focuses on the center.
+  Moving the map interrupts the introduction. Reduced-motion settings skip it.
+  The geographic land layer includes Jeju and smaller islands; no grid is drawn.
 - **Left-drag / one-finger drag:** pan in the direction of your drag. The map's angle does
   not change. **Arrow keys** and the on-map **Move** arrows pan the view in four
   directions, including on touch screens. Hold a Move arrow to keep panning.

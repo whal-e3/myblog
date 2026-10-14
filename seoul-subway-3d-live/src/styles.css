@@ -201,6 +201,7 @@ html[data-theme="dark"] .rotate-control button:hover{background:#294c6b}
 html[data-theme="dark"] .pan-control{border-color:#3b5873;color:#acc7df}
 html[data-theme="dark"] .pan-control button{color:#9fd1ff}
 html[data-theme="dark"] .pan-control button:hover,html[data-theme="dark"] .pan-control button:active{background:#294c6b}
+.viewport.country-scope .live-notice{display:none}
 .station-card,.line-card,.train-card{right:122px}
 @media(max-width:1180px){.station-card,.line-card,.train-card{right:110px}}
 @media(max-width:780px){

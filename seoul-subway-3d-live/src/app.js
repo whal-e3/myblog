@@ -8,6 +8,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const D = window.SEOUL_DATA;
+  const K = window.SEOUL_KOREA;
   const T = window.SeoulTrains;
   let canvas = $('scene');
   const overlay = $('labels'), viewport = $('viewport');
@@ -24,7 +25,7 @@
   let toastTimer;
   function toast(message) { $('toast').textContent=message; $('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2600); }
   function fatal(err) { console.error(err);$('loading').hidden=true;$('fatal-error').hidden=false;$('error-message').textContent='This browser could not initialize the 3D atlas. Try Chrome or Edge with graphics acceleration enabled. '+(err.message||''); }
-  if (!D || !D.stations?.length || !D.segments?.length) { fatal(new Error('Bundled network data is missing.'));return; }
+  if (!D || !D.stations?.length || !D.segments?.length || !K?.rings?.length || !K?.triangles?.length || !K.bounds) { fatal(new Error('Bundled map data is missing.'));return; }
   let gl;
   try {
     gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});
@@ -46,7 +47,7 @@
     let trainClock=0,trainInstances=[],trainHits=[],trainPoses=[];
     let previewYaw=-.67,previewPitch=.40;
     // Orthographic zoom uses CSS-pixel coordinates, independent of the display DPR.
-    const MIN_SCALE=.5,MAX_SCALE=260;
+    const MIN_SCALE=.5,MAX_SCALE=2200;
     let zoomAnchor=null;
     const colors=D.lines.map(l=>rgb(l.color));
     const majorNames=['서울','서울역','강남','홍대입구','김포공항','인천공항1터미널','인천공항2터미널','인천','수원','춘천','천안','청량리','왕십리','잠실','고속터미널','사당','공덕','용산','신도림','판교','동탄','운정중앙','동두천','연천','여주','지평','문산','대곡','금정','부평','정자'];
@@ -56,6 +57,7 @@
     // Small positive offsets distinguish overlapping routes; they are not tunnel depths.
     const lineLevel = (i,spread) => .32+layers[i]*spread;
     const lineHeight = i => lineLevel(i,cam.spread);
+    const surfaceDetail = () => clamp((300-cam.scale)/130,0,1);
     const activeLines = s=>s.lines.filter(l=>state.visible[l]);
     const stationHeight = s=> {const a=activeLines(s);return a.length?Math.max(...a.map(lineHeight)):.32;};
     const focusedStation = () => state.selectedStation===null?null:lookup.get(state.selectedStation);
@@ -150,11 +152,11 @@
     const tubeLoc={center:gl.getAttribLocation(tube,'aCenter'),normal:gl.getAttribLocation(tube,'aNormal'),vp:gl.getUniformLocation(tube,'uVP'),radius:gl.getUniformLocation(tube,'uRadius'),layer:gl.getUniformLocation(tube,'uLayer'),color:gl.getUniformLocation(tube,'uColor')};
     const pointLoc={pos:gl.getAttribLocation(points,'aPosition'),color:gl.getAttribLocation(points,'aColor'),meta:gl.getAttribLocation(points,'aMeta'),vp:gl.getUniformLocation(points,'uVP'),size:gl.getUniformLocation(points,'uSize'),dpr:gl.getUniformLocation(points,'uDpr'),ring:gl.getUniformLocation(points,'uRing'),fill:gl.getUniformLocation(points,'uFill')};
     function buffer(data,dynamic=false){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),dynamic?gl.DYNAMIC_DRAW:gl.STATIC_DRAW);return{buffer:b,count:data.length/3};}
+    const land=buffer(K.triangles.flatMap(p=>[p[0],-.08,p[1]]));
     const water=buffer(D.surface.waterTriangles.flatMap(p=>[p[0],.025,p[1]]));
     function pathLines(paths,y){let a=[];for(const p of paths)for(let j=1;j<p.length;j++)a.push(p[j-1][0],y,p[j-1][1],p[j][0],y,p[j][1]);return buffer(a);}
+    const coast=pathLines(K.rings.map(r=>[...r,r[0]]),.03);
     const borders=pathLines(D.surface.boundaries,.04), seoulOutline=pathLines(D.surface.seoul,.06), waterEdges=pathLines(D.surface.waterOutlines,.028);
-    const gridData=[];for(let n=-100;n<=110;n+=5){gridData.push(n,-.04,-100,n,-.04,110,-100,-.04,n,110,-.04,n);}
-    const grid=buffer(gridData);
     const lineVertices=D.lines.map(()=>[]);
     const SIDES=7;
     for(const e of D.segments){
@@ -193,7 +195,9 @@
       gl.clearColor(...rgb(mapTheme.background),1);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.depthMask(true);
-      flatDraw(grid,rgba(mapTheme.grid,mapTheme.gridAlpha));flatDraw(water,rgba(mapTheme.water,.9),gl.TRIANGLES);flatDraw(waterEdges,rgba(mapTheme.waterEdge,mapTheme.waterEdgeAlpha));flatDraw(borders,rgba(mapTheme.boundary,mapTheme.boundaryAlpha));flatDraw(seoulOutline,rgba(mapTheme.seoul,mapTheme.seoulAlpha));
+      flatDraw(land,rgba(mapTheme.land),gl.TRIANGLES);flatDraw(coast,rgba(mapTheme.coast,mapTheme.coastAlpha));
+      const detail=surfaceDetail();
+      if(detail){flatDraw(water,rgba(mapTheme.water,.9*detail),gl.TRIANGLES);flatDraw(waterEdges,rgba(mapTheme.waterEdge,mapTheme.waterEdgeAlpha*detail));flatDraw(borders,rgba(mapTheme.boundary,mapTheme.boundaryAlpha*detail));flatDraw(seoulOutline,rgba(mapTheme.seoul,mapTheme.seoulAlpha*detail));}
       const transitions=[],stationData=[];projected=[];
       const baseRadius=baseRailRadius();
       const emph=currentEmphasis();
@@ -238,9 +242,15 @@
       function disc(x,y,r,color,alpha=1){c.globalAlpha=alpha;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fillStyle=color;c.fill();}
       function drawSurface(){
         c.globalAlpha=1;
-        c.beginPath();for(let n=-100;n<=110;n+=5){path([[n,-100],[n,110]],-.04);path([[-100,n],[110,n]],-.04);}c.strokeStyle=cssRGBA(mapTheme.grid,mapTheme.gridAlpha);c.lineWidth=.65;c.stroke();
-        c.beginPath();const water=D.surface.waterTriangles;for(let i=0;i<water.length;i+=3){path(water.slice(i,i+3),.025);c.closePath();}c.fillStyle=mapTheme.water;c.fill();
-        surfacePaths(D.surface.waterOutlines,.028,cssRGBA(mapTheme.waterEdge,mapTheme.waterEdgeAlpha),.65);surfacePaths(D.surface.boundaries,.04,cssRGBA(mapTheme.boundary,mapTheme.boundaryAlpha),.6);surfacePaths(D.surface.seoul,.06,cssRGBA(mapTheme.seoul,mapTheme.seoulAlpha),.9);
+        c.beginPath();for(const ring of K.rings){path(ring,-.08);c.closePath();}c.fillStyle=mapTheme.land;c.fill('evenodd');
+        c.beginPath();for(const ring of K.rings){path(ring,.03);c.closePath();}c.strokeStyle=cssRGBA(mapTheme.coast,mapTheme.coastAlpha);c.lineWidth=1.2;c.stroke();
+        const detail=surfaceDetail();
+        if(detail){
+          c.globalAlpha=detail;
+          c.beginPath();const water=D.surface.waterTriangles;for(let i=0;i<water.length;i+=3){path(water.slice(i,i+3),.025);c.closePath();}c.fillStyle=mapTheme.water;c.fill();
+          surfacePaths(D.surface.waterOutlines,.028,cssRGBA(mapTheme.waterEdge,mapTheme.waterEdgeAlpha),.65);surfacePaths(D.surface.boundaries,.04,cssRGBA(mapTheme.boundary,mapTheme.boundaryAlpha),.6);surfacePaths(D.surface.seoul,.06,cssRGBA(mapTheme.seoul,mapTheme.seoulAlpha),.9);
+          c.globalAlpha=1;
+        }
       }
       return function drawSoftware(time){
         c.setTransform(dpr,0,0,dpr,0,0);c.globalAlpha=1;c.fillStyle=mapTheme.background;c.fillRect(0,0,width,height);c.lineJoin='round';c.lineCap='round';
@@ -290,7 +300,7 @@
       return {x:view.x+cy*right+sy*forward,y:planeY,z:view.z-sy*right+cy*forward};
     }
     function releaseZoomAnchor(){zoomAnchor=null;}
-    function cancelIntro(){if(intro){intro=null;Object.assign(goal,cam);dirty=true;}}
+    function cancelIntro(){if(intro){intro=null;Object.assign(goal,cam);state.scope='custom';updateScope();dirty=true;}}
     function pinZoomAnchor(view){
       if(!zoomAnchor)return;
       const p=pointUnderCursor(zoomAnchor.screenX,zoomAnchor.screenY,view,zoomAnchor.world.y);
@@ -340,23 +350,42 @@
       if(instant)Object.assign(cam,goal);
       dirty=true;
     }
+    function fitCountryCamera(instant=false){
+      releaseZoomAnchor();
+      const b=K.bounds,mobile=width<600;
+      goal.x=(b.minX+b.maxX)/2;goal.z=(b.minZ+b.maxZ)/2;goal.y=0;
+      goal.scale=clamp(Math.max(
+        (b.maxX-b.minX)/(aspect*(mobile?.74:.84)),
+        (b.maxZ-b.minZ)/(mobile?.70:.78)
+      ),8,MAX_SCALE);
+      if(instant)Object.assign(cam,goal);
+      dirty=true;
+    }
     function fitAll(instant=false,reset=false){cancelIntro();cancelFollow();if(reset){goal.yaw=DEFAULT_YAW;goal.pitch=DEFAULT_PITCH;}state.scope='full';updateScope();fitStations(visibleStations(),instant);}
+    function country(){
+      cancelIntro();cancelFollow();showAll();state.scope='country';
+      goal.yaw=0;goal.pitch=Math.PI/2;goal.spread=.12;
+      fitCountryCamera();updateScope();dirty=true;
+    }
     function core(){cancelIntro();releaseZoomAnchor();resetTrain();state.scope='core';state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();updateScope();goal.x=0;goal.z=-2;goal.y=0;goal.scale=width<600?49:37;dirty=true;}
     function startIntro(){
-      goal.yaw=0;goal.pitch=Math.PI/2;goal.y=0;
-      fitAll(true);
+      goal.yaw=0;goal.pitch=Math.PI/2;goal.y=0;goal.spread=.12;
+      fitCountryCamera(true);
       const from={...cam};
       goal.yaw=DEFAULT_YAW;goal.pitch=DEFAULT_PITCH;
       fitStations(visibleStations());
       const to={...goal};
-      if(reduced){Object.assign(cam,to);dirty=true;return;}
+      if(reduced){Object.assign(cam,to);state.scope='full';updateScope();dirty=true;return;}
       Object.assign(goal,from);
+      state.scope='country';updateScope();
       intro={from,to,elapsed:0};
       dirty=true;
     }
     function updateScope(){
+      viewport.classList.toggle('country-scope',state.scope==='country');
+      $('scope-country').classList.toggle('active',state.scope==='country');
       $('scope-full').classList.toggle('active',state.scope==='full');$('scope-core').classList.toggle('active',state.scope==='core');
-      let text=state.scope==='core'?'A closer look at the heart of Seoul':state.scope==='full'?'The full network, in perspective':'Explore Seoul at your own scale';
+      let text=state.scope==='country'?'South Korea · Seoul in context':state.scope==='core'?'A closer look at the heart of Seoul':state.scope==='full'?'The full network, in perspective':'Explore Seoul at your own scale';
       if(state.scope==='custom'){
         if(state.selectedTrain!==null)text=D.lines[fleet.trains[state.selectedTrain].line].name+' · 3D rolling stock';
         else if(state.selectedStation!==null){const s=lookup.get(state.selectedStation);text=s.ko+' · '+s.en;}
@@ -369,7 +398,11 @@
       if(wasIntro){cancelIntro();goal.yaw=DEFAULT_YAW;goal.pitch=DEFAULT_PITCH;}
       width=Math.max(1,r.width);height=Math.max(1,r.height);aspect=width/height;dpr=Math.min(window.devicePixelRatio||1,1.75);
       canvas.width=overlay.width=Math.round(width*dpr);canvas.height=overlay.height=Math.round(height*dpr);if(gl)gl.viewport(0,0,canvas.width,canvas.height);ctx.setTransform(dpr,0,0,dpr,0,0);
-      if(fitAfterResize||wasIntro){fitAll(true);fitAfterResize=false;}dirty=true;positionResults();updateTrainCard();
+      if(fitAfterResize||wasIntro){
+        if(state.scope==='country'&&!wasIntro){goal.yaw=0;goal.pitch=Math.PI/2;fitCountryCamera(true);}
+        else fitAll(true);
+        fitAfterResize=false;
+      }dirty=true;positionResults();updateTrainCard();
     }
     function render(time=performance.now()){
       updateMatrix();prepareTrains();drawScene(time);
@@ -388,6 +421,24 @@
         if(h){ctx.font='600 10px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.fillStyle=mapTheme.selectedLabel;ctx.fillText('3D TRAIN / '+h.train.number,h.center.x,h.center.y-27);}
       }
       if(!state.labels)return;
+      if(cam.scale>350){
+        const cities=width<600?[
+          ['SEOUL',126.978,37.5665],['BUSAN',129.0756,35.1796],['JEJU',126.5312,33.4996]
+        ]:[
+          ['SEOUL',126.978,37.5665],['DAEJEON',127.3845,36.3504],
+          ['DAEGU',128.6014,35.8714],['GWANGJU',126.8526,35.1595],
+          ['BUSAN',129.0756,35.1796],['JEJU',126.5312,33.4996]
+        ];
+        ctx.font='600 10px "Segoe UI", Arial, sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
+        for(const [name,lon,lat] of cities){
+          const p=project((lon-126.98)*88.28,.05,(37.53-lat)*111.32);
+          if(p.x<24||p.x>width-85||p.y<125||p.y>height-65)continue;
+          ctx.beginPath();ctx.arc(p.x,p.y,3.2,0,Math.PI*2);ctx.fillStyle=mapTheme.accent;ctx.fill();
+          ctx.lineWidth=3;ctx.strokeStyle=mapTheme.land;ctx.strokeText(name,p.x+8,p.y);
+          ctx.fillStyle=mapTheme.majorLabel;ctx.fillText(name,p.x+8,p.y);
+        }
+        return;
+      }
       const boxes=[],labels=[];
       const reserved=[{x:0,y:0,w:width,h:103},{x:width-72,y:100,w:72,h:325},{x:width/2-170,y:height-112,w:340,h:112}];
       for(const id of ['station-card','line-card','train-card']){const card=$(id);if(!card.hidden){const r=card.getBoundingClientRect(),v=viewport.getBoundingClientRect();reserved.push({x:r.left-v.left,y:r.top-v.top,w:r.width,h:r.height});}}
@@ -429,13 +480,15 @@
       if(state.orbit&&!document.hidden){goal.yaw+=dt*.045;dirty=true;}
       let changed=false;
       if(intro&&!document.hidden){
-        // Use wall time for the opening move even when Canvas fallback renders slowly.
+        // Show all South Korea first, then move toward the subway while tilting into 3D.
         intro.elapsed+=Math.min(frameDt,.5);
-        // Hold the overhead view through the loading fade, then ease into perspective.
-        const t=clamp((intro.elapsed-.55)/3.1,0,1),ease=t*t*(3-2*t);
-        for(const k of Object.keys(cam))cam[k]=mix(intro.from[k],intro.to[k],ease);
+        const z=clamp((intro.elapsed-.85)/4.0,0,1),zoom=z*z*(3-2*z);
+        const t=clamp((intro.elapsed-1.25)/3.6,0,1),tilt=t*t*(3-2*t);
+        for(const k of ['x','y','z'])cam[k]=mix(intro.from[k],intro.to[k],zoom);
+        cam.scale=intro.from.scale*Math.pow(intro.to.scale/intro.from.scale,zoom);
+        for(const k of ['yaw','pitch','spread'])cam[k]=mix(intro.from[k],intro.to[k],tilt);
         Object.assign(goal,cam);changed=true;
-        if(t===1){Object.assign(cam,intro.to);Object.assign(goal,intro.to);intro=null;}
+        if(z===1&&t===1){Object.assign(cam,intro.to);Object.assign(goal,intro.to);intro=null;state.scope='full';updateScope();}
       }else if(!intro){
         const f=reduced?1:1-Math.exp(-dt*9);
         for(const k of Object.keys(cam)){if(Math.abs(cam[k]-goal[k])>0.00005){cam[k]=mix(cam[k],goal[k],f);changed=true;}else cam[k]=goal[k];}
@@ -606,7 +659,7 @@
     function toggleOrbit(){cancelIntro();releaseZoomAnchor();cancelFollow();state.orbit=!state.orbit;$('orbit').setAttribute('aria-pressed',String(state.orbit));$('orbit').classList.toggle('active',state.orbit);dirty=true;}
     function rotateBy(amount){releaseZoomAnchor();stopAutomaticCamera();goal.yaw=cam.yaw+amount;dirty=true;}
     function home(){cancelIntro();state.orbit=false;$('orbit').setAttribute('aria-pressed','false');$('orbit').classList.remove('active');showAll();fitAll(false,true);$('search').value='';$('results').hidden=true;closeMobile();}
-    $('brand-home').onclick=home;$('nav-explore').onclick=home;$('scope-full').onclick=()=>{showAll();fitAll();};$('scope-core').onclick=core;$('fit').onclick=()=>fitAll();
+    $('brand-home').onclick=home;$('nav-explore').onclick=home;$('scope-country').onclick=country;$('scope-full').onclick=()=>{showAll();fitAll();};$('scope-core').onclick=core;$('fit').onclick=()=>fitAll();
     $('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('north').onclick=()=>{releaseZoomAnchor();stopAutomaticCamera();goal.yaw=0;dirty=true;};$('rotate-left').onclick=()=>rotateBy(-Math.PI/8);$('rotate-right').onclick=()=>rotateBy(Math.PI/8);$('orbit').onclick=toggleOrbit;
     for(const direction of Object.keys(panDirections)){
       const button=$(`pan-${direction}`);let holdTimer,repeatTimer,held=false;
@@ -684,6 +737,6 @@
     }
     live.connect({getLineIds:()=>D.lines.filter((_,i)=>state.visible[i]).map(l=>l.id),getMotionEnabled:()=>state.motion,onUpdate:applyLive,onTick:()=>{if(state.selectedTrain!==null&&live.quality(fleet.trains[state.selectedTrain])==='expired')resetTrain();updateTrainCard();dirty=true;}});
     $('retry-render').onclick=()=>location.reload();
-    window.__SEOUL_APP__={theme:window.SeoulTheme,live,applyLive,pan,renderer:gl?'webgl':'software-3d',data:D,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,fitAll,render,project,getProjected:()=>projected,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
+    window.__SEOUL_APP__={theme:window.SeoulTheme,live,applyLive,pan,renderer:gl?'webgl':'software-3d',data:D,korea:K,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,fitAll,country,render,project,getProjected:()=>projected,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
   }
 })();
