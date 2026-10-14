@@ -4,7 +4,7 @@
 Optional dev dependency: playwright + Chromium. Browser policy in the build environment
 blocks URL navigation, so the bundle is loaded with set_content. Storage is an explicit
 Storage-shaped fixture for preference tests; opaque-origin storage is tested separately.
-Train records are synthetic test fixtures, never observations of actual services.
+The selected train is from the offline simulation, never an observation of an actual service.
 """
 from pathlib import Path
 import argparse, json
@@ -18,7 +18,8 @@ html = (root/'dist/seoul-subway-3d-live.html').read_text(encoding='utf-8')
 out = root/'tests/results'; out.mkdir(parents=True, exist_ok=True)
 report = {'browserNavigation':'set_content (URL navigation blocked by environment policy)',
           'storage':'in-memory Storage fixture; no native reload-persistence assertion',
-          'trainData':'synthetic fixtures only', 'cases':[], 'pageErrors':[]}
+          'trainData':'offline simulation only', 'cases':[], 'pageErrors':[],
+          'networkRequests':[]}
 
 def record(name, **detail):
     report['cases'].append({'case':name, **detail}); print('PASS',name,flush=True)
@@ -30,6 +31,8 @@ def load(browser, theme='light', saved=None, storage=True, mobile=False, width=1
                             reduced_motion='reduce' if reduced_motion else 'no-preference',
                             is_mobile=mobile,has_touch=mobile)
     page.on('pageerror',lambda e:report['pageErrors'].append(str(e)))
+    page.on('request',lambda request:report['networkRequests'].append(request.url))
+    page.route('**/*',lambda route:route.abort())
     if storage:
         page.evaluate('''saved=>{
           window.__themeStore={...(saved||{})};
@@ -38,13 +41,23 @@ def load(browser, theme='light', saved=None, storage=True, mobile=False, width=1
             setItem:(k,v)=>{__themeStore[k]=String(v)},removeItem:k=>delete __themeStore[k]
           }});
         }''',saved)
-    page.evaluate('''()=>{window.fetch=async()=>new Response(JSON.stringify({
-      configured:false,enabledLines:['2','1'],supportedLines:['1','2'],pollSeconds:30,
-      serverTime:new Date().toISOString(),budget:{used:0,localLimit:1000}
-    }),{status:200,headers:{'Content-Type':'application/json'}});}''')
+    page.evaluate('''()=>{
+      // Freeze the service clock at a weekday afternoon so the test can select
+      // an active simulated train regardless of the real wall clock.
+      Date.now=()=>Date.parse('2026-10-14T07:31:45Z');
+      window.__fetchAttempts=[];
+      window.fetch=(...args)=>{
+        window.__fetchAttempts.push(String(args[0]));
+        return Promise.reject(new Error('Theme test forbids network requests'));
+      };
+    }''')
     page.set_content(html,wait_until='load')
     page.wait_for_function('!!window.__SEOUL_APP__ && document.querySelector("#loading").hidden')
     return page
+
+def close_offline(page):
+    assert page.evaluate('window.__fetchAttempts')==[],page.evaluate('window.__fetchAttempts')
+    page.close()
 
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path=args.chromium,headless=True,
@@ -69,7 +82,7 @@ with sync_playwright() as p:
     reloaded=load(browser,theme='light',saved=saved)
     assert reloaded.evaluate('SeoulTheme.current')=='dark'
     record('new-document-restores-saved-choice-storage-fixture')
-    reloaded.close()
+    close_offline(reloaded)
 
     # Theme changes cannot alter geography, selections, camera targets, or source colors.
     page.evaluate('''()=>{const a=__SEOUL_APP__;a.releaseZoomAnchor();a.core();Object.assign(a.cam,a.goal);a.render()}''')
@@ -93,24 +106,22 @@ with sync_playwright() as p:
     page.evaluate('()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render()}')
     page.screenshot(path=str(out/'dark-desktop.png'))
 
-    # Selection and actual model instances survive a theme switch; data is test-only.
+    # Selection and actual model instances survive a theme switch.
     page.evaluate('''()=>{
-      const a=__SEOUL_APP__,now=new Date().toISOString();a.applyLive({lines:[{
-        lineId:'2',state:'ok',trains:[{key:'2:TEST:DARK',lineId:'2',number:'TEST-DARK',
-        stationName:'강남',observedAt:now,receivedAt:now,direction:'0',status:'1',
-        destination:'성수',express:false,lastTrain:false}]}]});
-      a.selectTrain(0);Object.assign(a.cam,a.goal);a.render();
+      const a=__SEOUL_APP__,train=a.fleet.trains.find(t=>a.simulation.isActive(t));
+      if(!train)throw new Error('No daytime simulated train available');
+      a.selectTrain(train.id);Object.assign(a.cam,a.goal);a.render();
     }''')
     page.wait_for_timeout(50)
     assert page.evaluate('__SEOUL_APP__.getTrainInstances().length')>=4
     before=page.evaluate('JSON.stringify({train:__SEOUL_APP__.state.selectedTrain,follow:__SEOUL_APP__.state.followTrain,n:__SEOUL_APP__.fleet.trains.length})')
     page.click('#theme-toggle');page.click('#theme-toggle')
     assert page.evaluate('JSON.stringify({train:__SEOUL_APP__.state.selectedTrain,follow:__SEOUL_APP__.state.followTrain,n:__SEOUL_APP__.fleet.trains.length})')==before
-    assert page.locator('#train-number').inner_text()=='TRAIN TEST-DARK'
+    assert page.locator('#train-number').inner_text().startswith('SCENARIO ')
+    assert 'SIMULATED POSITION · NOT LIVE' in page.locator('#train-model-status').inner_text()
     assert page.locator('#train-card').is_visible()
-    record('train-model-inspector-and-follow-preserved-synthetic-fixture')
-    page.evaluate('''()=>{const m=document.createElement('div');m.textContent='SYNTHETIC TEST FIXTURE — NOT LIVE DATA';Object.assign(m.style,{position:'fixed',bottom:'4px',left:'33%',zIndex:1000,padding:'6px 10px',background:'#193751',color:'#ffcf85',font:'bold 10px sans-serif'});document.body.append(m)}''')
-    page.screenshot(path=str(out/'dark-train-test-fixture.png'))
+    record('train-model-inspector-and-follow-preserved-simulation')
+    page.screenshot(path=str(out/'dark-simulated-train.png'))
 
     page.click('#nav-about');page.locator('#theme-preference').select_option('system')
     assert page.evaluate('SeoulTheme.preference')=='system'
@@ -127,7 +138,7 @@ with sync_playwright() as p:
     page.evaluate('''()=>window.dispatchEvent(new StorageEvent('storage',{key:SeoulTheme.storageKey,newValue:'light'}))''')
     assert page.evaluate('SeoulTheme.current')=='light'
     record('cross-tab-storage-event-applies-theme')
-    page.close()
+    close_offline(page)
 
     for width in [390,320]:
         mobile=load(browser,theme='dark',mobile=True,width=width)
@@ -144,11 +155,11 @@ with sync_playwright() as p:
             mobile.locator('#mobile-menu').tap()
             mobile.screenshot(path=str(out/'dark-mobile-sidebar.png'))
         record('mobile-layout-and-touch-toggle-'+str(width))
-        mobile.close()
+        close_offline(mobile)
     blocked=load(browser,theme='dark',storage=False)
     blocked.click('#theme-toggle');assert blocked.evaluate('SeoulTheme.current')=='light'
     record('opaque-origin-storage-unavailable-still-works')
-    blocked.close()
+    close_offline(blocked)
 
     animated=load(browser,reduced_motion=False)
     assert animated.locator('#mode-layers').count()==0
@@ -178,14 +189,15 @@ with sync_playwright() as p:
     assert animated.locator('#viewport').get_attribute('class').find('country-scope')>=0
     assert animated.locator('.live-notice').is_hidden()
     record('country-control-fits-full-geographic-outline')
-    animated.close()
+    close_offline(animated)
     interrupted=load(browser,reduced_motion=False)
     interrupted.click('#rotate-right')
     yaw=interrupted.evaluate('__SEOUL_APP__.goal.yaw')
     interrupted.wait_for_timeout(3600)
     assert abs(interrupted.evaluate('__SEOUL_APP__.goal.yaw')-yaw)<1e-6
     record('manual-rotation-interrupts-intro')
-    interrupted.close();browser.close()
+    close_offline(interrupted);browser.close()
 assert not report['pageErrors'],report['pageErrors']
+assert not report['networkRequests'],report['networkRequests']
 (out/'theme-browser-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 print(f"{len(report['cases'])} theme cases passed; no page errors.")

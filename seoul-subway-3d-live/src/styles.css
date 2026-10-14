@@ -257,3 +257,25 @@ html[data-theme="dark"] :is(.place-card h2,.national-card h2){color:var(--text)}
   .place-card{top:auto;bottom:47px;left:12px;right:12px;width:auto;max-height:min(210px,38%);overflow-y:auto;padding:14px 16px;overscroll-behavior:contain}
   .viewport:has(.place-card:not([hidden])) :is(.live-notice,.map-legend,.train-launcher){display:none}
 }
+
+/* Always disclose that the moving trains are illustrative, including on phones
+   where the header status button is hidden. */
+.snapshot-chip.simulation-chip{align-items:flex-start;gap:9px;padding:8px 11px;background:#fff7eaf2;border-color:#e7bd8d;color:#74451d;box-shadow:0 3px 14px #51330d12;max-width:calc(100% - 135px)}
+.simulation-chip .status-dot{width:7px;height:7px;margin-top:3px;background:#d26c00;opacity:1}
+.simulation-chip strong{display:block;font-size:10px;font-weight:750;line-height:1.25;letter-spacing:.55px;color:#853e08;white-space:nowrap}
+.simulation-chip small{display:block;margin-top:3px;font-size:8px;line-height:1.3;letter-spacing:0;color:#76502f}
+.live-badge[data-state="simulated"]{background:#fff7ea;border-color:#e7bd8d;color:#853e08}
+.live-badge[data-state="simulated"]>i{background:#d26c00}
+.train-launcher{top:151px}
+html[data-theme="dark"] .snapshot-chip.simulation-chip,html[data-theme="dark"] .live-badge[data-state="simulated"]{background:#332618f0;border-color:#8e623a;color:#ffd29e}
+html[data-theme="dark"] .simulation-chip strong{color:#ffd29e}
+html[data-theme="dark"] .simulation-chip small{color:#e4bb8f}
+html[data-theme="dark"] .simulation-chip .status-dot,html[data-theme="dark"] .live-badge[data-state="simulated"]>i{background:#ffad50}
+@media(max-height:700px) and (min-width:781px){.train-launcher{top:126px}}
+@media(max-width:780px){
+  .snapshot-chip.simulation-chip{top:78px;left:19px;max-width:calc(100% - 112px);padding:7px 9px}
+  .simulation-chip strong{font-size:9px;letter-spacing:.25px}
+  .simulation-chip small{display:none}
+  .train-launcher{top:118px}
+}
+@media(max-width:360px){.snapshot-chip.simulation-chip{max-width:calc(100% - 94px)}}

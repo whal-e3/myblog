@@ -1,41 +1,43 @@
 #!/usr/bin/env python3
-"""Browser regression suite. ALL train observations here are SYNTHETIC TEST FIXTURES.
+"""Offline browser regression for map navigation and simulation disclosure.
 No TOPIS connection or live tracking verification is claimed.
 Run: python tests/test_live_browser.py path/to/seoul-subway-3d-live.html
 Requires optional developer dependency playwright and a Chromium binary.
 """
 import argparse,json,time
 from pathlib import Path
-from datetime import datetime,timedelta,timezone
 from playwright.sync_api import sync_playwright
-p=argparse.ArgumentParser();p.add_argument('html',type=Path);p.add_argument('--chromium',default='/usr/bin/chromium');p.add_argument('--output',type=Path,default=Path(__file__).parent/'live-browser-report.json');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('html',type=Path);p.add_argument('--chromium',default='/usr/bin/chromium');p.add_argument('--output',type=Path,default=Path(__file__).parent/'results/live-browser-report.json');args=p.parse_args()
 args.output.parent.mkdir(exist_ok=True,parents=True)
 started=time.monotonic()
-results={'syntheticFixturesOnly':True,'authorizedLiveAPIValidated':False,'cases':[],'errors':[]}
+results={'offlineSimulationOnly':True,'authorizedLiveAPIValidated':False,'cases':[],'errors':[]}
 def record(name,details):results['cases'].append({'case':name,**details});print(round(time.monotonic()-started,1),name,json.dumps(details,ensure_ascii=False),flush=True)
-def iso(seconds=0):return (datetime.now(timezone.utc)+timedelta(seconds=seconds)).isoformat()
-status={'configured':False,'enabledLines':['2','1'],'supportedLines':['1','2'],'pollSeconds':30,'budget':{'used':0,'localLimit':1000},'serverTime':iso()}
-feed={'configured':True,'enabledLines':['2','1'],'supportedLines':['1','2'],'pollSeconds':30,'budget':{'used':1,'localLimit':1000},'serverTime':iso(),'lines':[]}
-calls=[]
-def fixture(url):
- calls.append(url)
- if url=='/api/live/status':return json.dumps({**status,'serverTime':iso()})
- return json.dumps({**feed,'serverTime':iso()})
-def station_row(name='강남',number='TEST-2001',seconds=-10):
- return {'key':'2:TEST:'+number,'lineId':'2','number':number,'stationName':name,'observedAt':iso(seconds),'receivedAt':iso(),'direction':'0','status':'1','destination':'성수','express':False,'lastTrain':False}
+requests=[]
 def load(browser,**kw):
  kw.setdefault('reduced_motion','reduce')
  page=browser.new_page(**kw);page.on('pageerror',lambda e:results['errors'].append(str(e)))
- page.expose_function('__fixtureFetch',fixture)
- page.evaluate('()=>{window.fetch=async url=>new Response(await window.__fixtureFetch(url),{status:200,headers:{"Content-Type":"application/json"}});}')
- page.set_content(args.html.read_text(encoding='utf-8'),wait_until='load');page.wait_for_function('!!window.__SEOUL_APP__');page.wait_for_timeout(600);return page
+ page.on('request',lambda request:requests.append(request.url))
+ page.route('**/*',lambda route:route.abort())
+ page.evaluate('''()=>{
+   const fixed=Date.parse('2026-10-14T07:31:45Z');
+   Date.now=()=>fixed;
+   window.__fetchAttempts=[];
+   window.fetch=(...args)=>{window.__fetchAttempts.push(String(args[0]));return Promise.reject(new Error('Network is forbidden in the offline simulation test'));};
+ }''')
+ page.set_content(args.html.read_text(encoding='utf-8'),wait_until='load')
+ page.wait_for_function('!!window.__SEOUL_APP__ && document.querySelector("#loading").hidden')
+ assert not requests and not page.evaluate('window.__fetchAttempts'),requests
+ return page
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=args.chromium,headless=True,args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  page=load(b,viewport={'width':1440,'height':950})
- assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==0
- assert page.locator('#live-badge-label').inner_text()=='FEED NOT CONFIGURED'
+ assert page.evaluate('__SEOUL_APP__.simulation.activeCount()')>0
+ assert page.evaluate('__SEOUL_APP__.data.lines.length')==24
+ assert page.locator('.simulation-chip').is_visible()
+ assert 'SIMULATED TRAINS · NOT LIVE' in page.locator('.simulation-chip').inner_text()
+ assert 'SIMULATED · NOT LIVE' in page.locator('#live-badge-label').inner_text()
  assert page.locator('#motion-toggle').is_disabled() and not page.locator('#motion-toggle').is_checked()
- record('no-key-no-synthetic-trains',{'trains':0,'apiCalls':len(calls)})
+ record('offline-simulation-disclosure',{'mappedRoutes':24,'activeTrains':page.evaluate('__SEOUL_APP__.simulation.activeCount()'),'networkRequests':len(requests)})
  page.click('#scope-core');page.wait_for_timeout(1000)
  # Real mouse gesture; the projected world anchor must follow the exact screen delta.
  page.evaluate('()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}')
@@ -51,16 +53,16 @@ with sync_playwright() as p:
  for yaw in [0,.65]:
   page.evaluate('(yaw)=>{const a=__SEOUL_APP__;a.core();a.goal.yaw=yaw;Object.assign(a.cam,a.goal);a.render();}',yaw)
   before=page.evaluate('__SEOUL_APP__.project(0,0,0)')
-  page.click('#pan-up');page.wait_for_timeout(120)
+  page.click('#pan-up');page.evaluate('()=>{const a=__SEOUL_APP__;Object.assign(a.cam,a.goal);a.render();}')
   up=page.evaluate('__SEOUL_APP__.project(0,0,0)')
   assert up['y']>before['y']+20,(yaw,before,up)
-  page.click('#pan-right');page.wait_for_timeout(120)
+  page.click('#pan-right');page.evaluate('()=>{const a=__SEOUL_APP__;Object.assign(a.cam,a.goal);a.render();}')
   right=page.evaluate('__SEOUL_APP__.project(0,0,0)')
   assert right['x']<up['x']-20,(yaw,up,right)
   record('direction-pad-screen-pan',{'yaw':yaw,'upPixels':up['y']-before['y'],'rightPixels':up['x']-right['x']})
  page.locator('#scene').focus()
  before=page.evaluate('__SEOUL_APP__.project(0,0,0)')
- page.keyboard.press('ArrowLeft');page.wait_for_timeout(120)
+ page.keyboard.press('ArrowLeft');page.evaluate('()=>{const a=__SEOUL_APP__;Object.assign(a.cam,a.goal);a.render();}')
  after=page.evaluate('__SEOUL_APP__.project(0,0,0)')
  assert after['x']>before['x']+20,(before,after)
  record('canvas-arrow-key-pan',{'leftPixels':after['x']-before['x']})
@@ -79,7 +81,9 @@ with sync_playwright() as p:
    const event=new WheelEvent('wheel',{cancelable:true,deltaX:input.deltaX,deltaY:input.deltaY,deltaMode:input.mode,...input.flags});
    document.querySelector('#scene').dispatchEvent(event);return event.defaultPrevented;
   }''',{'deltaX':delta_x,'deltaY':delta_y,'mode':mode,'flags':flags})
-  page.wait_for_timeout(120)
+  # Synthetic rolling stock makes the first rendered frame expensive on some
+  # Chrome/SwiftShader setups; verify the camera's target after settling it.
+  page.evaluate('()=>{const a=__SEOUL_APP__;Object.assign(a.cam,a.goal);a.render();}')
   after=page.evaluate('({p:__SEOUL_APP__.project(0,0,0),scale:__SEOUL_APP__.goal.scale,yaw:__SEOUL_APP__.goal.yaw,pitch:__SEOUL_APP__.goal.pitch})')
   travel=(after['p'][axis]-before['p'][axis])*sign
   assert prevented and travel>20,(name,before,after,prevented)
@@ -104,82 +108,24 @@ with sync_playwright() as p:
  for delta in [-190,190]:
   print('starting zoom',delta,round(time.monotonic()-started,1),flush=True)
   rr=page.evaluate(zoomtest,delta);assert rr['drift']<.1,rr;record('cursor-centered-zoom',rr)
- # UI -> client fetch -> normalized fixture -> real scene/inspector.
- feed['lines']=[{'lineId':'2','state':'ok','trains':[station_row()]}]
- page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
- assert any(url.startswith('/api/live/positions?lines=1%2C2') for url in calls),calls
- assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==1
- assert page.locator('#live-count').inner_text()=='1'
- assert page.locator('[data-feed-state="1"]').inner_text()=='NOT POLLED'
- assert page.locator('[data-feed-state="인천1"]').inner_text()=='MAP ONLY'
- record('server-advertised-route-selection',{'requested':['1','2'],'line1':'NOT POLLED','incheon1':'MAP ONLY'})
- page.evaluate('__SEOUL_APP__.selectTrain(0)');page.wait_for_timeout(1100)
- assert 'Gangnam' in page.locator('#train-station').inner_text()
- assert page.locator('#train-number').inner_text()=='TRAIN TEST-2001'
+ # Train inspector must describe an invented scenario, never a provider observation.
+ page.click('#train-inspect');page.wait_for_timeout(1100)
+ assert page.locator('#train-card').is_visible()
+ assert page.locator('#train-number').inner_text().startswith('SCENARIO ')
+ assert 'SIMULATED POSITION · NOT LIVE' in page.locator('#train-model-status').inner_text()
+ assert 'not a provider report' in page.locator('#train-card .card-note').inner_text().lower()
  assert page.evaluate('__SEOUL_APP__.getTrainInstances().length')>=4
- assert not page.locator('#train-card').get_attribute('hidden')
- # Inspect 3D transforms anchored exactly to observed station; old simulation clock has no effect.
- fixed=page.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0],p=a.live.pose(t,0,.025,false),q=a.live.pose(t,10000,.025,false);return {x:p.x,z:p.z,stationX:t.station.x,stationZ:t.station.z,same:p.x===q.x&&p.z===q.z,cars:p.cars.length,finite:p.cars.every(c=>[c.x,c.z,c.dx,c.dz].every(Number.isFinite))};}''')
- assert abs(fixed['x']-fixed['stationX'])<1e-8 and abs(fixed['z']-fixed['stationZ'])<1e-8 and fixed['same'] and fixed['cars']==4 and fixed['finite'];record('reported-station-not-simulation',fixed)
- # Watermark test-only screenshot to prevent interpreting fixture trains as actual live evidence.
- page.evaluate('''()=>{const p=document.createElement('div');p.id='qa-watermark';p.textContent='TEST FIXTURE — NOT LIVE DATA';Object.assign(p.style,{position:'fixed',bottom:'4px',left:'32%',background:'#fff',color:'#ad1d35',zIndex:99999,padding:'5px 10px',font:'bold 10px sans-serif',border:'1px solid #ad1d35'});document.body.append(p);}''')
- page.screenshot(path=str(args.output.parent/'fixture-train-desktop.png'))
- # A subsequent report of the same identifier at the next station: three seconds of visual interpolation then stop.
- feed['lines'][0]['trains']=[station_row('역삼',seconds=-1)]
- rr=page.evaluate('''async()=>{const a=__SEOUL_APP__;await a.live.refresh();const t=a.fleet.trains[0],p=a.live.pose(t,0,.025,true);return {transition:!!t.transition,beginX:p.x,targetX:t.station.x,selected:a.state.selectedTrain};}''')
- assert rr['transition'] and abs(rr['beginX']-rr['targetX'])>.1 and rr['selected']==0
- rr=page.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0];t.transition.start-=3500;const p=a.live.pose(t,0,.025,true);return {x:p.x,target:t.station.x,interpolating:a.live.interpolating(t)};}''')
- assert abs(rr['x']-rr['target'])<1e-8 and not rr['interpolating'];record('successive-reports-end-at-observation',rr)
- # With motion enabled, an unambiguous departed report may move a short estimated distance.
- moving=load(b,viewport={'width':1440,'height':950},reduced_motion='no-preference')
- assert moving.locator('#motion-toggle').is_checked()
- feed['lines'][0]['trains']=[station_row('강남',seconds=-5)]
- moving.evaluate('async()=>await __SEOUL_APP__.live.refresh()')
- feed['lines'][0]['trains']=[station_row('역삼',seconds=-3)]
- moving.evaluate('''async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.fleet.trains[0].transition.start-=3500;}''')
- feed['lines'][0]['trains']=[{**station_row('역삼',seconds=-1),'status':'2'}]
- rr=moving.evaluate('''async()=>{const a=__SEOUL_APP__;await a.live.refresh();a.selectTrain(0);
-  const t=a.fleet.trains[0],m=t.transition;m.start-=1500;a.render();const p=a.live.pose(t,0,.025,true),fixed=a.live.pose(t,0,.025,false);
-  return {motion:m.kind,moved:Math.hypot(p.x-fixed.x,p.z-fixed.z),progress:m.to,segment:m.path.total,card:document.querySelector('#train-model-status').textContent};}''')
- assert rr['motion']=='estimate' and 0<rr['moved']<.08 and rr['progress']<=rr['segment']*.06
- moving.evaluate('__SEOUL_APP__.live.ui()')
- assert 'TRACK POSITION ESTIMATED' in moving.locator('#train-model-status').inner_text()
- moving.click('#train-pause')
- assert not moving.locator('#motion-toggle').is_checked()
- assert moving.evaluate('__SEOUL_APP__.fleet.trains[0].transition===null')
- assert moving.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0],p=a.live.pose(t,0,.025,a.state.motion);return p.x===t.station.x&&p.z===t.station.z;}''')
- record('estimated-motion-labeled-and-optional',rr)
- moving.close()
- # Reordering preserves selected train ID, unknown stations excluded.
- feed['lines'][0]['trains']=[station_row('선릉','TEST-2002'),station_row('역삼'),station_row('NOT A STATION','UNKNOWN')]
- page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
- assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==2
- assert page.evaluate('__SEOUL_APP__.state.selectedTrain')==1
- assert page.evaluate('__SEOUL_APP__.live.source.stats.unmapped')==1
- # Stale connection -> no fresh markers; expire removes transforms, no simulation fallback.
- page.evaluate("()=>{const a=__SEOUL_APP__;a.live.fail('TEST FIXTURE OUTAGE');a.live.ui();a.render();}")
- assert page.locator('#live-count').inner_text()=='0'
- assert page.evaluate('__SEOUL_APP__.getTrainInstances().every(c=>c.alpha<.5)')
- page.evaluate("()=>{const a=__SEOUL_APP__;for(const t of a.fleet.trains)t.observedAt=new Date(Date.now()-400000).toISOString();a.live.ui();a.render();}")
- assert page.evaluate('__SEOUL_APP__.getTrainInstances().length')==0
- record('stale-expire-no-fake-fallback',{'freshAfterError':0,'carsAfterExpiry':0})
- # A healthy route remains fresh when another enabled route fails.
- first={**station_row('서울역','TEST-1001'),'key':'1:TEST:1001','lineId':'1'}
- feed['lines']=[{'lineId':'1','state':'ok','trains':[first]},
-                {'lineId':'2','state':'error','trains':[],'message':'Synthetic route failure'}]
- feed['quotaWarning']='Synthetic fixture: daily cap cannot sustain this polling schedule.'
- page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
- assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==1
- assert page.locator('[data-feed-state="1"]').inner_text()=='1 LIVE'
- assert page.locator('[data-feed-state="2"]').inner_text()=='ERROR'
- assert page.locator('#live-badge-label').inner_text()=='PARTIAL LIVE'
+ assert page.evaluate('__SEOUL_APP__.fleet.trains[__SEOUL_APP__.state.selectedTrain].simulated')
+ assert not page.evaluate('window.__fetchAttempts') and not requests,(requests,page.evaluate('window.__fetchAttempts'))
+ page.screenshot(path=str(args.output.parent/'simulated-train-desktop.png'))
+ record('simulated-train-inspector',{'cars':page.evaluate('__SEOUL_APP__.getTrainInstances().length'),'networkRequests':len(requests)})
+ # Opening the explanation must not connect to the optional diagnostic feed.
  page.click('#live-badge')
- assert page.locator('#coverage-body tr').count()==24
- assert 'Synthetic route failure' in page.locator('#coverage-body').inner_text()
- assert 'daily cap cannot sustain' in page.locator('#live-quota-warning').inner_text()
- assert page.locator('#live-quota-warning').is_visible()
+ assert page.locator('#live-dialog').evaluate('(e)=>e.open')
+ assert 'simulation' in page.locator('#live-dialog').inner_text().lower()
  page.click('#close-live')
- record('mixed-route-status',{'healthy':'1 LIVE','failed':'ERROR','global':'PARTIAL LIVE'})
+ assert not page.evaluate('window.__fetchAttempts') and not requests,(requests,page.evaluate('window.__fetchAttempts'))
+ record('offline-simulation-dialog',{'networkRequests':len(requests)})
  # Source palette is kept exactly, and light blue map + white panel applied.
  colors=page.evaluate('({allMatch:__SEOUL_APP__.data.lines.every(l=>l.color===l.originalColor),panel:getComputedStyle(document.querySelector(".sidebar")).backgroundColor,accent:getComputedStyle(document.documentElement).getPropertyValue("--accent")})')
  assert colors['allMatch'] and colors['panel']=='rgb(255, 255, 255)';record('metro-palette',colors)
@@ -207,7 +153,9 @@ with sync_playwright() as p:
  record('mobile-touch-controls',{'panDelta':[45,30],'pinchZoom':True,'noHorizontalOverflow':True})
  assert mobile.locator('#live-notice-connect').is_visible()
  mobile.click('#live-notice-connect');assert mobile.locator('#live-dialog').evaluate('(e)=>e.open');mobile.click('#close-live')
- mobile.screenshot(path=str(args.output.parent/'no-key-mobile.png'))
+ assert 'SIMULATED TRAINS · NOT LIVE' in mobile.locator('.simulation-chip').inner_text()
+ assert not mobile.evaluate('window.__fetchAttempts') and not requests,(requests,mobile.evaluate('window.__fetchAttempts'))
+ mobile.screenshot(path=str(args.output.parent/'simulated-map-mobile.png'))
  record('browser-errors',{'count':len(results['errors'])})
  assert not results['errors'],results['errors']
  b.close()

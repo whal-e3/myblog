@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a single-file map preview. Live reports still need the included local server."""
+"""Build a standalone map preview with offline simulated trains."""
 from pathlib import Path
 import argparse
 
@@ -20,10 +20,14 @@ def build(destination: Path) -> Path:
             '<script>\n' + (root / 'data/national-rail.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="data/kpop.js"></script>':
             '<script>\n' + (root / 'data/kpop.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
+        '<script src="data/train-density-profile.js"></script>':
+            '<script>\n' + (root / 'data/train-density-profile.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/trains.js"></script>':
             '<script>\n' + (root / 'src/trains.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/live.js"></script>':
             '<script>\n' + (root / 'src/live.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
+        '<script src="src/simulation.js"></script>':
+            '<script>\n' + (root / 'src/simulation.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/kpop-models.js"></script>':
             '<script>\n' + (root / 'src/kpop-models.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/app.js"></script>':

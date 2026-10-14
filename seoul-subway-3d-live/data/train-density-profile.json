@@ -1,0 +1,150 @@
+{
+  "schema": "seoul-train-count-profile/v1",
+  "source": {
+    "provider": "Seoul Metropolitan Government / TOPIS",
+    "dataset": "realtimePosition",
+    "url": "https://data.seoul.go.kr/dataList/OA-12601/A/1/datasetView.do",
+    "countUnit": "Deduplicated, timestamped station-level train reports",
+    "locationType": "Station reports; not GPS coordinates or a timetable"
+  },
+  "coverage": {
+    "routes": 19,
+    "timeBucketsObserved": 1,
+    "typicalCoverage": false,
+    "note": "Counts are samples of provider-reported trains, not all operating trains. A sparse profile cannot establish typical service frequency or train movements."
+  },
+  "samples": [
+    {
+      "sampledAtKST": "2026-10-14T16:31:48+09:00",
+      "bucketKST": {
+        "dayType": "weekday",
+        "hour": 16,
+        "quarter": 2
+      },
+      "snapshotKey": "52be21c3caf3fd6f01ef1bf5",
+      "evidence": {
+        "kind": "one_off_provider_survey",
+        "routeCount": 19,
+        "windowStartKST": "2026-10-14T16:31:45+09:00",
+        "windowEndKST": "2026-10-14T16:31:48+09:00",
+        "note": "One complete provider-reported snapshot, not an all-day frequency profile."
+      },
+      "routes": {
+        "1": {
+          "reported": 81,
+          "visible": 70,
+          "fresh": 42,
+          "stale": 28
+        },
+        "2": {
+          "reported": 39,
+          "visible": 39,
+          "fresh": 25,
+          "stale": 14
+        },
+        "3": {
+          "reported": 31,
+          "visible": 28,
+          "fresh": 24,
+          "stale": 4
+        },
+        "4": {
+          "reported": 37,
+          "visible": 34,
+          "fresh": 26,
+          "stale": 8
+        },
+        "5": {
+          "reported": 35,
+          "visible": 35,
+          "fresh": 15,
+          "stale": 20
+        },
+        "6": {
+          "reported": 19,
+          "visible": 19,
+          "fresh": 9,
+          "stale": 10
+        },
+        "7": {
+          "reported": 33,
+          "visible": 33,
+          "fresh": 19,
+          "stale": 14
+        },
+        "8": {
+          "reported": 15,
+          "visible": 15,
+          "fresh": 6,
+          "stale": 9
+        },
+        "9": {
+          "reported": 29,
+          "visible": 29,
+          "fresh": 19,
+          "stale": 10
+        },
+        "공항철도": {
+          "reported": 19,
+          "visible": 19,
+          "fresh": 5,
+          "stale": 14
+        },
+        "경의·중앙": {
+          "reported": 25,
+          "visible": 25,
+          "fresh": 13,
+          "stale": 12
+        },
+        "경춘": {
+          "reported": 8,
+          "visible": 8,
+          "fresh": 3,
+          "stale": 5
+        },
+        "수인·분당": {
+          "reported": 33,
+          "visible": 33,
+          "fresh": 20,
+          "stale": 13
+        },
+        "신분당": {
+          "reported": 12,
+          "visible": 12,
+          "fresh": 12,
+          "stale": 0
+        },
+        "경강": {
+          "reported": 5,
+          "visible": 5,
+          "fresh": 3,
+          "stale": 2
+        },
+        "서해": {
+          "reported": 8,
+          "visible": 8,
+          "fresh": 5,
+          "stale": 3
+        },
+        "W": {
+          "reported": 11,
+          "visible": 11,
+          "fresh": 9,
+          "stale": 2
+        },
+        "Silim": {
+          "reported": 6,
+          "visible": 6,
+          "fresh": 5,
+          "stale": 1
+        },
+        "GTX-A": {
+          "reported": 11,
+          "visible": 11,
+          "fresh": 8,
+          "stale": 3
+        }
+      }
+    }
+  ]
+}

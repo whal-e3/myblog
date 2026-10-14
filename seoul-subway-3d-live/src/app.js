@@ -1,8 +1,8 @@
 /* Seoul Subsurface — original application, MIT.
  * Bundled rail/water data: © OpenStreetMap contributors, ODbL.
  * Source compilation: wantaekchoi/seoul-subway, 498fbc62e01479905e22c0577d60e8b875e86ace.
- * Vertical offsets and rolling stock scale are illustrative. Live train anchors are reported stations, not GPS.
- * No third-party runtime libraries or telemetry. Live data uses the included same-origin server.
+ * Vertical offsets, rolling stock, and animated trains are illustrative.
+ * The default scene is an offline simulation, not train tracking or an arrival service.
  */
 (() => {
   'use strict';
@@ -27,7 +27,7 @@
   let toastTimer;
   function toast(message) { $('toast').textContent=message; $('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2600); }
   function fatal(err) { console.error(err);$('loading').hidden=true;$('fatal-error').hidden=false;$('error-message').textContent='This browser could not initialize the 3D atlas. Try Chrome or Edge with graphics acceleration enabled. '+(err.message||''); }
-  if (!D || !D.stations?.length || !D.segments?.length || !K?.rings?.length || !K?.triangles?.length || !K.bounds || !window.SeoulKpopModels) { fatal(new Error('Bundled map assets are missing.'));return; }
+  if (!D || !D.stations?.length || !D.segments?.length || !K?.rings?.length || !K?.triangles?.length || !K.bounds || !window.SeoulKpopModels || !window.SeoulSimulation) { fatal(new Error('Bundled map assets are missing.'));return; }
   let gl;
   try {
     gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});
@@ -43,9 +43,11 @@
     let fitAfterResize=true,dragged=false,searchIndex=-1,searchMatches=[],intro=null;
     let mapTheme=window.SeoulTheme.palette;
     const lookup=new Map(D.stations.map(s=>[s.id,s]));
-    const live=window.SeoulLive.create(D,T),fleet=live.fleet;
-    const trainPose=(train,clock,scale)=>live.pose(train,clock,scale,state.motion);
-    let visibleFeeds="";
+    const simulation=window.SeoulSimulation.create(D,T,{profile:window.SEOUL_TRAIN_PROFILE});
+    // The legacy feed adapter remains available for local diagnostics, but the
+    // visitor-facing map never connects it or spends provider requests.
+    const live=window.SeoulLive.create(D,T),fleet=simulation.fleet;
+    const trainPose=(train,clock,scale)=>simulation.pose(train,clock,scale,state.motion);
     let trainClock=0,trainInstances=[],trainHits=[],trainPoses=[],kpopHits=[],nationalHits=[];
     let previewYaw=-.67,previewPitch=.40;
     // Orthographic zoom uses CSS-pixel coordinates, independent of the display DPR.
@@ -77,14 +79,14 @@
     function prepareTrains(){
       trainInstances=[];trainHits=[];trainPoses=[];
       for(const train of fleet.trains){
-        if(!state.visible[train.line]||lineOpacity(train.line)<.5||live.quality(train)==='expired')continue;
+        if(!state.visible[train.line]||lineOpacity(train.line)<.5||!simulation.isActive(train))continue;
         const pose=trainPose(train,trainClock,modelScale());
         const y=lineHeight(train.line)+baseRailRadius()*1.05;
         const center=project(pose.x,y,pose.z),margin=Math.max(60,T.SPACING*4*pose.scale/cam.scale*height);
         if(center.x < -margin || center.x>width+margin || center.y < -margin || center.y>height+margin)continue;
         trainPoses.push(pose);
         for(const car of pose.cars){
-          const inst={...car,y,tint:colors[train.line],alpha:live.quality(train)==='fresh'?1:.38,lod:car.scale/cam.scale*height*T.CAR_LENGTH>20?'high':'low'};
+          const inst={...car,y,tint:colors[train.line],alpha:1,lod:car.scale/cam.scale*height*T.CAR_LENGTH>20?'high':'low'};
           trainInstances.push(inst);
           const a=project(...T.transformed([0,.5,-T.CAR_LENGTH/2],inst)),b=project(...T.transformed([0,.5,T.CAR_LENGTH/2],inst));
           trainHits.push({train,a,b,r:Math.max(5,car.scale/cam.scale*height*.6),center:project(car.x,y+.55*car.scale,car.z)});
@@ -100,26 +102,26 @@
     function updateTrainCard(){
       const train=state.selectedTrain===null?null:fleet.trains[state.selectedTrain];
       $('train-card').hidden=!train;
-      $('train-pause').textContent=state.motion?'Disable estimated motion':'Enable estimated motion';
+      $('train-pause').textContent=state.motion?'Pause simulated motion':'Resume simulated motion';
       if(!train)return;
       $('train-line-name').textContent=D.lines[train.line].name;
-      $('train-number').textContent='TRAIN '+train.number;
+      $('train-number').textContent='SCENARIO '+String(train.number).replace(/^SIM[- ]?/i,'');
       $('train-color').style.background=D.lines[train.line].color;
       $('train-follow').setAttribute('aria-pressed',String(state.followTrain));
       $('train-follow').textContent=state.followTrain?'Following train':'Follow train';
-      const quality=live.quality(train),motion=live.motionKind(train,state.motion);
-      $('train-model-status').textContent=(quality==='fresh'?'FRESH REPORT':quality.toUpperCase())+' · '+live.statusName(train.status)+(motion==='estimate'?' · TRACK POSITION ESTIMATED':motion==='observed'?' · VISUAL INTERPOLATION':'');
-      $('train-model-status').dataset.quality=quality;
-      $('train-station').textContent=train.station.ko+' · '+train.station.en;
-      $('train-destination').textContent=train.destination||'Not provided';
-      $('train-observed').textContent=live.clock(train.observedAt)+' · '+Math.floor(live.age(train))+'s ago';
-      $('train-direction').textContent=live.directionName(train.direction,D.lines[train.line].id)+(train.express?' · EXPRESS':' · local')+(train.lastTrain?' · LAST TRAIN':'');
+      const details=simulation.details(train,trainClock);
+      $('train-model-status').textContent='SIMULATED POSITION · NOT LIVE'+(details.status?' · '+details.status.toUpperCase():'');
+      $('train-model-status').dataset.quality='simulated';
+      $('train-station').textContent=details.station?.ko?details.station.ko+' · '+details.station.en:String(details.station||'Illustrative route');
+      $('train-destination').textContent=details.destination?.ko||details.destination||'Illustrative endpoint';
+      $('train-observed').textContent='Animation clock · '+Math.floor(trainClock/1000)+'s since reset';
+      $('train-direction').textContent=(details.destination?'Toward '+details.destination:'Illustrative direction')+' · synthetic service';
       T.preview($('train-preview'),colors[train.line],previewYaw,previewPitch);
     }
     function cancelFollow(){if(state.followTrain){state.followTrain=false;updateTrainCard();}}
     function resetTrain(){state.selectedTrain=null;state.followTrain=false;$('train-card').hidden=true;}
     function selectTrain(id){
-      cancelIntro();releaseZoomAnchor();const train=fleet.trains[id];if(!train)return;
+      cancelIntro();releaseZoomAnchor();const train=fleet.trains[id];if(!train||!simulation.isActive(train))return;
       clearAux();
       state.selectedTrain=id;state.selectedLine=null;state.selectedStation=null;state.followTrain=true;
       state.visible[train.line]=true;state.scope='custom';state.orbit=false;
@@ -133,19 +135,47 @@
       $('map-subtitle').textContent=D.lines[train.line].name+' · 3D rolling stock';dirty=true;
     }
     function inspectTrain(){
-      const candidates=fleet.trains.filter(t=>live.quality(t)!=='expired'&&state.visible[t.line]&&(state.selectedLine===null||t.line===state.selectedLine));
-      if(!candidates.length){toast('No fresh train reports. Open Connection settings to connect live data.');$('live-settings').click();return;}
+      const candidates=fleet.trains.filter(t=>simulation.isActive(t)&&state.visible[t.line]&&(state.selectedLine===null||t.line===state.selectedLine));
+      if(!candidates.length){toast('No simulated trains are active on the selected routes at this scenario time.');return;}
       let best=candidates[0],distance=Infinity;
       for(const t of candidates){const p=trainPose(t,trainClock,modelScale()),screen=project(p.x,lineHeight(t.line),p.z),d=Math.hypot(screen.x-width/2,screen.y-height/2);if(d<distance){best=t;distance=d;}}
       selectTrain(best.id);
     }
+    function updateSimulationUI(){
+      const now=Date.now();
+      const byLine=D.lines.map((_,i)=>fleet.trains.filter(t=>t.line===i&&simulation.isActive(t,now)).length);
+      const count=byLine.reduce((n,v,i)=>n+(state.visible[i]?v:0),0);
+      const allCount=byLine.reduce((n,v)=>n+v,0);
+      const clock=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(now));
+      $('live-badge').dataset.state='simulated';
+      $('live-badge-label').textContent='SIMULATED · NOT LIVE';
+      $('live-panel-state').textContent='SIMULATED · NOT LIVE';
+      $('live-count').textContent=String(count);
+      $('live-stale-count').textContent='';
+      $('live-age').textContent=count?
+        'Invented positions on mapped rails · '+clock+' KST scenario':
+        allCount?'No simulated trains on selected routes':'Overnight scenario · no simulated trains at '+clock+' KST';
+      $('live-poll-label').textContent='No live positions or arrival predictions';
+      $('live-toggle').textContent=state.motion?'Pause motion':'Resume motion';
+      $('live-toggle').setAttribute('aria-pressed',String(state.motion));
+      $('live-toggle').disabled=reduced;
+      $('live-refresh').textContent='Restart simulation';
+      $('live-filter-note').hidden=true;
+      $('live-budget').hidden=true;
+      $('train-legend-text').textContent=state.motion?'Simulated train motion':'Simulated trains paused';
+      for(const el of document.querySelectorAll('[data-feed-state]')){
+        const i=D.lines.findIndex(l=>l.id===el.dataset.feedState);
+        el.textContent=i<0?'SIMULATED':`${byLine[i]} SIMULATED`;
+      }
+      if(state.selectedTrain!==null&&!simulation.isActive(fleet.trains[state.selectedTrain],now))resetTrain();
+      if(state.selectedTrain!==null)updateTrainCard();
+    }
     function setMotion(on){
       state.motion=!!on&&!reduced;$('motion-toggle').checked=state.motion;
-      if(!state.motion)for(const train of fleet.trains)train.transition=null;
       $('motion-toggle').disabled=reduced;$('train-pause').disabled=reduced;
       if(reduced){$('motion-toggle').title='Motion is off while reduced motion is enabled on this device.';$('train-pause').title=$('motion-toggle').title;}
       $('flow-legend').classList.toggle('paused',!state.motion);
-      live.ui();
+      updateSimulationUI();
       updateTrainCard();dirty=true;
     }
     function makeGPURenderer(){
@@ -564,6 +594,21 @@
     }
     function drawLabels(time){
       ctx.clearRect(0,0,width,height);
+      // At network scale the actual four-car meshes are subpixel. A tiny
+      // route-colored point keeps their synthetic movement legible until the
+      // camera is close enough to show the 3D car geometry itself.
+      if(cam.scale<180){
+        ctx.save();
+        for(const pose of trainPoses){
+          if(T.CAR_LENGTH*pose.scale/cam.scale*height>=4)continue;
+          const p=project(pose.x,lineHeight(pose.train.line)+baseRailRadius()*1.05,pose.z);
+          if(p.x<3||p.x>width-3||p.y<105||p.y>height-16)continue;
+          ctx.beginPath();ctx.arc(p.x,p.y,2.35,0,Math.PI*2);
+          ctx.lineWidth=1.25;ctx.strokeStyle=mapTheme.background;ctx.stroke();
+          ctx.fillStyle=D.lines[pose.train.line].color;ctx.fill();
+        }
+        ctx.restore();
+      }
       const selected=focusedStation();
       if(selected && activeLines(selected).length){const p=project(selected.x,stationHeight(selected),selected.z);ctx.beginPath();ctx.arc(p.x,p.y,11+(state.motion?1.7*Math.sin(time*.003):0),0,Math.PI*2);ctx.strokeStyle=mapTheme.accent;ctx.lineWidth=1.3;ctx.stroke();}
       if(state.selectedTrain!==null){
@@ -622,7 +667,9 @@
     }
     function frame(time){
       const frameDt=(time-lastFrame)/1000||.016,dt=Math.min(frameDt,.05);lastFrame=time;
-      if(state.motion&&!document.hidden)trainClock+=dt;
+      // Keep synthetic travel tied to elapsed visible time even when a heavy
+      // WebGL frame takes longer than the camera's capped smoothing step.
+      if(state.motion&&!document.hidden)trainClock+=Math.min(Math.max(frameDt,0),2)*1000;
       if(state.followTrain&&state.selectedTrain!==null){
         const t=fleet.trains[state.selectedTrain],p=trainPose(t,trainClock,modelScale());
         goal.x=p.x;goal.z=p.z;goal.y=lineHeight(t.line)+.03;
@@ -647,8 +694,7 @@
       // Re-constrain every interpolated frame: the same world point stays beneath the cursor
       // throughout the animation, including rapid wheel reversals and cursor changes.
       if(zoomAnchor){pinZoomAnchor(cam);if(!changed&&!pointers.size)releaseZoomAnchor();}
-      const reportTransition=state.motion&&fleet.trains.some(t=>live.interpolating(t));
-      if(!document.hidden&&(dirty||changed||reportTransition||state.orbit)){render(time);dirty=false;}
+      if(!document.hidden&&(dirty||changed||state.motion||state.orbit)){render(time);dirty=false;}
       requestAnimationFrame(frame);
     }
 
@@ -671,7 +717,7 @@
       if(state.selectedLine!==null&&!state.visible[state.selectedLine])state.selectedLine=null;
       if(focusedStation()&&!activeLines(focusedStation()).length)state.selectedStation=null;
       updateLineUI();updateCards();updateEmptyState();dirty=true;
-      const feeds=D.lines.filter((_,i)=>state.visible[i]).map(l=>l.id).join(',');if(feeds!==visibleFeeds){visibleFeeds=feeds;live.selectionChanged();}
+      updateSimulationUI();
     }
     function showAll(){resetTrain();clearAux();state.visible.fill(true);state.selectedLine=null;state.selectedStation=null;updateVisibility();}
     function clearSelection(){cancelIntro();resetTrain();clearAux();state.selectedLine=null;state.selectedStation=null;updateLineUI();updateCards();dirty=true;}
@@ -771,7 +817,7 @@
       }else{
         const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
         const train=hitTrain(x,y);
-        if(train){hover={train};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=`3D train · ${escapeHTML(D.lines[train.line].name)}<small>Click to inspect report & follow</small>`;tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
+        if(train){hover={train};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=`Simulated 3D train · ${escapeHTML(D.lines[train.line].name)}<small>Invented position · click to follow</small>`;tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
         const kpop=kpopHits.find(h=>Math.hypot(h.x-x,h.y-y)<h.r);
         if(kpop){hover={kpop};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=kpop.site?`${escapeHTML(kpop.site.name)}<small>K-pop place · select to inspect</small>`:'K-pop places<small>Click to explore Seoul landmarks</small>';tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
         const national=nationalHits.find(h=>Math.hypot(h.x-x,h.y-y)<7);
@@ -857,7 +903,7 @@
     $('export-national-data').onclick=()=>{download(new Blob([JSON.stringify(N,null,2)],{type:'application/json'}),'korea-passenger-rail.json');toast('National rail geometry exported with source metadata');};
     $('export').onclick=()=>{
       try{
-        render();const image=document.createElement('canvas');image.width=canvas.width;image.height=canvas.height+Math.round(76*dpr);const c=image.getContext('2d');c.fillStyle=mapTheme.background;c.fillRect(0,0,image.width,image.height);c.drawImage(canvas,0,0);c.drawImage(overlay,0,0);c.scale(dpr,dpr);c.fillStyle=mapTheme.accent;c.font='600 13px "Segoe UI",sans-serif';c.fillText('SEOUL / SUBSURFACE',24,height+29);c.fillStyle=mapTheme.exportText;c.font='10px "Segoe UI",sans-serif';c.fillText(`${state.visible.filter(Boolean).length} Seoul lines · static Korea rail · Seoul snapshot 24 Aug 2026 · ${$('live-badge-label').textContent}`,24,height+50);c.textAlign='right';c.font='9px "Segoe UI",sans-serif';c.fillText('© OpenStreetMap contributors / ODbL · Live reports: Seoul TOPIS',width-22,height+29);image.toBlob(b=>{if(b){download(b,'seoul-subsurface.png');toast('Map image exported');}else toast('The browser could not export this image.');},'image/png');
+        render();const image=document.createElement('canvas');image.width=canvas.width;image.height=canvas.height+Math.round(76*dpr);const c=image.getContext('2d');c.fillStyle=mapTheme.background;c.fillRect(0,0,image.width,image.height);c.drawImage(canvas,0,0);c.drawImage(overlay,0,0);c.scale(dpr,dpr);c.fillStyle=mapTheme.accent;c.font='600 13px "Segoe UI",sans-serif';c.fillText('SEOUL / SUBSURFACE',24,height+29);c.fillStyle=mapTheme.exportText;c.font='10px "Segoe UI",sans-serif';c.fillText(`${state.visible.filter(Boolean).length} Seoul lines · static Korea rail · Seoul snapshot 24 Aug 2026 · SIMULATED TRAINS, NOT LIVE`,24,height+50);c.textAlign='right';c.font='9px "Segoe UI",sans-serif';c.fillText('© OpenStreetMap contributors / ODbL · Train positions and counts invented',width-22,height+29);image.toBlob(b=>{if(b){download(b,'seoul-subsurface.png');toast('Map image exported');}else toast('The browser could not export this image.');},'image/png');
       }catch(err){toast('Image export failed. Please try a browser screenshot.');console.error(err);}
     };
     document.addEventListener('keydown',e=>{
@@ -883,17 +929,17 @@
     });
     viewport.addEventListener('pointerdown',cancelIntro,true);
     viewport.addEventListener('wheel',cancelIntro,{capture:true,passive:true});
-    createLineUI();createAuxUI();new ResizeObserver(resize).observe(viewport);resize();startIntro();render();lastFrame=performance.now();requestAnimationFrame(frame);
+    document.addEventListener('visibilitychange',()=>{lastFrame=performance.now();});
+    createLineUI();createAuxUI();updateSimulationUI();new ResizeObserver(resize).observe(viewport);resize();startIntro();render();lastFrame=performance.now();requestAnimationFrame(frame);
     $('loading').classList.add('dismissed');setTimeout(()=>$('loading').hidden=true,550);
-    // Exposes a small read/debug surface for reproducible automated smoke tests.
-    function applyLive(payload){
-      const key=state.selectedTrain===null?null:fleet.trains[state.selectedTrain]?.key;
-      live.apply(payload);
-      if(key){const index=fleet.trains.findIndex(t=>t.key===key);if(index<0)resetTrain();else state.selectedTrain=index;}
-      updateTrainCard();dirty=true;
-    }
-    live.connect({getLineIds:()=>D.lines.filter((_,i)=>state.visible[i]).map(l=>l.id),getMotionEnabled:()=>state.motion,onUpdate:applyLive,onTick:()=>{if(state.selectedTrain!==null&&live.quality(fleet.trains[state.selectedTrain])==='expired')resetTrain();updateTrainCard();dirty=true;}});
+    const simulationDialog=$('live-dialog');
+    for(const id of ['live-badge','live-settings','live-notice-connect'])$(id).onclick=()=>simulationDialog.showModal();
+    $('close-live').onclick=()=>simulationDialog.close();
+    $('live-toggle').onclick=()=>setMotion(!state.motion);
+    $('live-refresh').onclick=()=>{trainClock=0;updateTrainCard();dirty=true;toast('Simulation restarted');};
+    setInterval(updateSimulationUI,1000);
     $('retry-render').onclick=()=>location.reload();
-    window.__SEOUL_APP__={theme:window.SeoulTheme,live,applyLive,pan,renderer:gl?'webgl':'software-3d',data:D,korea:K,national:N,kpop:P,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,focusCity,focusNationalLine,focusKpop,selectPlace,fitAll,country,render,project,getProjected:()=>projected,getKpopHits:()=>kpopHits,getNationalHits:()=>nationalHits,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
+    // Exposes a small read/debug surface for reproducible automated smoke tests.
+    window.__SEOUL_APP__={theme:window.SeoulTheme,simulation,live,pan,renderer:gl?'webgl':'software-3d',data:D,korea:K,national:N,kpop:P,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,focusCity,focusNationalLine,focusKpop,selectPlace,fitAll,country,render,project,getProjected:()=>projected,getKpopHits:()=>kpopHits,getNationalHits:()=>nationalHits,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
   }
 })();

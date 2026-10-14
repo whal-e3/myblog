@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local Seoul Subsurface web server + secret-preserving TOPIS proxy.
+"""Local Seoul Subsurface simulation server with optional TOPIS diagnostics.
 Run: python server.py --open
 Only Python 3.10+ is required. The server binds to 127.0.0.1, not the LAN.
 """
@@ -36,7 +36,7 @@ def load_env(path: Path):
 
 def create_server(root: Path, feed: FeedClient, port: int):
     # Explicit assets only. Never expose .env, runtime files, server code, or directory listings.
-    assets = {name: root/name for name in ['index.html', 'src/styles.css', 'src/theme.js', 'src/app.js', 'src/trains.js', 'src/live.js', 'src/kpop-models.js', 'data/network.js', 'data/korea.js', 'data/national-rail.js', 'data/kpop.js']}
+    assets = {name: root/name for name in ['index.html', 'src/styles.css', 'src/theme.js', 'src/app.js', 'src/trains.js', 'src/live.js', 'src/simulation.js', 'src/kpop-models.js', 'data/network.js', 'data/korea.js', 'data/national-rail.js', 'data/kpop.js', 'data/train-density-profile.js', 'data/train-density-profile.json']}
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'SeoulSubsurface'
@@ -114,7 +114,8 @@ def main():
         parser.exit(1, f'Cannot start the server: {exc}\n')
     url = f'http://127.0.0.1:{srv.server_port}'
     print(f'Seoul Subsurface: {url}\nPress Ctrl+C to stop.')
-    print('Live API key configured.' if feed.configured else 'Live tracking is NOT connected. Set SEOUL_SUBWAY_API_KEY in .env, then restart.')
+    print('Simulated trains are available offline; the map does not poll TOPIS.')
+    print('Optional TOPIS diagnostic key configured.' if feed.configured else 'Optional TOPIS diagnostics have no key configured.')
     if feed.configured and feed.scheme == 'http':
         print('Notice: the documented upstream API uses HTTP; the API key is sent to swopenapi.seoul.go.kr in the URL. See README for HTTPS configuration.')
     if args.open:
