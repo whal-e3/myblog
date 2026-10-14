@@ -19,4 +19,32 @@ check('Unknown and future timestamps excluded',()=>{apply([row('강남',{observe
 check('Old station report stale, then expires',()=>{apply([row('강남',{observedAt:iso(-100)})]);const t=live.fleet.trains[0];assert.equal(live.quality(t),'stale');t.observedAt=iso(-400);assert.equal(live.quality(t),'expired');apply([row('강남',{observedAt:iso(-400)})]);assert.equal(live.fleet.trains.length,0);});
 check('Connection error does not refresh observation time',()=>{apply([row()]);const t=live.fleet.trains[0],stamp=t.observedAt;live.fail('TEST OUTAGE');assert.equal(live.quality(t),'stale');assert.equal(t.observedAt,stamp);});
 check('No report means no trains',()=>{apply([]);assert.equal(live.fleet.trains.length,0);});
+check('Multiple route reports use their own mapped stations',()=>{
+ const first={...row('서울역'),key:'1:TEST:1001',lineId:'1',number:'TEST-1001'};
+ live.apply({configured:true,enabledLines:['1','2'],supportedLines:['1','2'],serverTime:iso(),lines:[
+  {lineId:'1',state:'ok',trains:[first]},
+  {lineId:'2',state:'ok',trains:[row('강남',{key:'2:TEST:2002'})]},
+ ]});
+ assert.deepEqual(live.fleet.trains.map(t=>D.lines[t.line].id),['1','2']);
+ assert.deepEqual(live.fleet.trains.map(t=>t.station.ko),['서울역','강남']);
+ assert.equal(live.source.supportedLines.length,2);
+});
+check('One route failure does not mark another route stale',()=>{
+ const first={...row('서울역'),key:'1:TEST:1001',lineId:'1',number:'TEST-1001'};
+ live.apply({configured:true,enabledLines:['1','2'],supportedLines:['1','2'],serverTime:iso(),lines:[
+  {lineId:'1',state:'error',message:'Fixture outage',trains:[first]},
+  {lineId:'2',state:'ok',trains:[row('강남',{key:'2:TEST:2002'})]},
+ ]});
+ assert.equal(live.source.state,'connected');
+ assert.deepEqual(live.fleet.trains.map(t=>live.quality(t)),['stale','fresh']);
+});
+check('Explicit provider-observed station fallbacks use existing points',()=>{
+ for(const [lineId,name,stationId] of [
+  ['GTX-A','성남',619],['공항철도','디지털미디어시티',250],['경춘','용산',49],['W','삼양',433],
+ ]){
+  const line=D.lines.findIndex(l=>l.id===lineId);
+  assert.equal(live.resolve(line,name)?.id,stationId,`${lineId} ${name}`);
+  assert.equal(live.resolve(line,'UNVERIFIED STATION'),null);
+ }
+});
 console.log(`${tests} client-model cases passed; synthetic fixtures only.`);

@@ -1,4 +1,4 @@
-# Local-only Worker configuration for the Seoul Line 2 feed.
+# Local-only Worker configuration for the Seoul feed. Line 2 stays the default.
 # Run against an existing Astro dist/: wrangler dev --config wrangler.subway-dev.toml --port 8788
 # Do not deploy this configuration. The production wrangler.toml stays unchanged.
 name = "sunhyuksblog-subway-dev"
@@ -15,6 +15,9 @@ not_found_handling = "404-page"
 GITHUB_REPO = "whal-e3/myblog"
 SITE_ORIGIN = "https://sunhyuk.dev"
 SUBWAY_DEV_ENABLED = "true"
+SEOUL_LIVE_LINES = "2"
+SEOUL_POLL_SECONDS = "120"
+SEOUL_DAILY_LIMIT = "900"
 
 [[durable_objects.bindings]]
 name = "SEOUL_LINE2_FEED"

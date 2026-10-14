@@ -1,14 +1,54 @@
 // Shared, secret-free parsing for Seoul TOPIS realtimePosition. These are
 // station observations, not GPS positions or arrival predictions.
 
-export const LINE_ID = "2";
-export const PROVIDER_LINE_ID = "1002";
-export const LINE_NAME = "2호선";
+// Route names and IDs are those returned by TOPIS realtimePosition. The
+// public sample endpoint was checked for every entry; GTX-A reports 1032.
+export const FEEDS = {
+  "1": { name: "1호선", providerId: "1001" },
+  "2": { name: "2호선", providerId: "1002" },
+  "3": { name: "3호선", providerId: "1003" },
+  "4": { name: "4호선", providerId: "1004" },
+  "5": { name: "5호선", providerId: "1005" },
+  "6": { name: "6호선", providerId: "1006" },
+  "7": { name: "7호선", providerId: "1007" },
+  "8": { name: "8호선", providerId: "1008" },
+  "9": { name: "9호선", providerId: "1009" },
+  "공항철도": { name: "공항철도", providerId: "1065" },
+  "경의·중앙": { name: "경의중앙선", providerId: "1063" },
+  "경춘": { name: "경춘선", providerId: "1067" },
+  "수인·분당": { name: "수인분당선", providerId: "1075" },
+  "신분당": { name: "신분당선", providerId: "1077" },
+  "경강": { name: "경강선", providerId: "1081" },
+  "서해": { name: "서해선", providerId: "1093" },
+  "W": { name: "우이신설선", providerId: "1092" },
+  "Silim": { name: "신림선", providerId: "1094" },
+  "GTX-A": { name: "GTX-A", providerId: "1032" },
+} as const;
+export type FeedLineId = keyof typeof FEEDS;
+export const SUPPORTED_LINES = Object.keys(FEEDS) as FeedLineId[];
+export const LINE_ID: FeedLineId = "2";
 export const DOCUMENTATION = "https://data.seoul.go.kr/dataList/OA-12601/A/1/datasetView.do";
 export const POLL_SECONDS = 120;
 export const FRESH_SECONDS = 90;
 export const EXPIRE_SECONDS = 300;
 export const DAILY_LIMIT = 900;
+
+export function isFeedLineId(value: string): value is FeedLineId {
+  return Object.prototype.hasOwnProperty.call(FEEDS, value);
+}
+
+export function enabledLines(value?: string): FeedLineId[] {
+  const configured = value?.trim() || LINE_ID;
+  if (configured === "all") return [...SUPPORTED_LINES];
+  return [...new Set(configured.split(",").map(s => s.trim()).filter(isFeedLineId))];
+}
+
+export function requestedLines(value: string): FeedLineId[] | null {
+  const ids = value.split(",").map(s => s.trim());
+  if (!value || ids.length > SUPPORTED_LINES.length || ids.some(id => !isFeedLineId(id))) return null;
+  if (new Set(ids).size !== ids.length) return null;
+  return ids as FeedLineId[];
+}
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -84,7 +124,7 @@ function providerError(code: string): FeedError {
     "INFO-100": "The API key was rejected. Check approval for the realtime subway service.",
     "ERROR-300": "The provider rejected the request parameters.",
     "ERROR-331": "The provider rejected the pagination range.",
-    "ERROR-337": "Line 2 is unavailable to this API key.",
+    "ERROR-337": "The provider's daily API quota has been reached.",
     "ERROR-338": "The provider's daily API quota has been reached.",
   };
   return new FeedError(safeCode, messages[safeCode] ?? `The upstream service returned ${safeCode}.`);
@@ -126,21 +166,22 @@ export function parsePayload(raw: string): { rows: Record<string, unknown>[]; to
 const field = (row: Record<string, unknown>, name: string, limit: number): string =>
   String(row[name] ?? "").slice(0, limit);
 
-export function normalizeRows(rows: unknown[], fetchedMs: number): { trains: TrainReport[]; skipped: number } {
+export function normalizeRows(rows: unknown[], fetchedMs: number, lineId: FeedLineId = LINE_ID): { trains: TrainReport[]; skipped: number } {
   const byKey = new Map<string, TrainReport>();
   let skipped = 0;
+  const providerLineId = FEEDS[lineId].providerId;
   for (const value of rows) {
     const row = object(value);
     if (!row) { skipped++; continue; }
     const providerId = String(row.subwayId ?? "");
     const number = String(row.trainNo ?? "").trim();
     const stationName = String(row.statnNm ?? "").trim();
-    if (providerId !== PROVIDER_LINE_ID || !number || !stationName) { skipped++; continue; }
+    if (providerId !== providerLineId || !number || !stationName) { skipped++; continue; }
     const observedAt = observationTime(row, fetchedMs);
     const serviceDay = observedAt ? dateKST(Date.parse(observedAt)) : "unknown";
-    const key = `${LINE_ID}:${serviceDay}:${number}`;
+    const key = `${lineId}:${serviceDay}:${number}`;
     const item: TrainReport = {
-      key, lineId: LINE_ID, providerLineId: providerId,
+      key, lineId, providerLineId: providerId,
       number: number.slice(0, 32), stationId: field(row, "statnId", 40),
       stationName: stationName.slice(0, 100), observedAt, receivedAt: iso(fetchedMs),
       direction: field(row, "updnLine", 20), status: field(row, "trainSttus", 20),

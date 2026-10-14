@@ -106,8 +106,12 @@ with sync_playwright() as p:
  # UI -> client fetch -> normalized fixture -> real scene/inspector.
  feed['lines']=[{'lineId':'2','state':'ok','trains':[station_row()]}]
  page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
+ assert any(url.startswith('/api/live/positions?lines=1%2C2') for url in calls),calls
  assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==1
  assert page.locator('#live-count').inner_text()=='1'
+ assert page.locator('[data-feed-state="1"]').inner_text()=='NOT POLLED'
+ assert page.locator('[data-feed-state="인천1"]').inner_text()=='MAP ONLY'
+ record('server-advertised-route-selection',{'requested':['1','2'],'line1':'NOT POLLED','incheon1':'MAP ONLY'})
  page.evaluate('__SEOUL_APP__.selectTrain(0)');page.wait_for_timeout(1100)
  assert 'Gangnam' in page.locator('#train-station').inner_text()
  assert page.locator('#train-number').inner_text()=='TRAIN TEST-2001'
@@ -138,6 +142,23 @@ with sync_playwright() as p:
  page.evaluate("()=>{const a=__SEOUL_APP__;for(const t of a.fleet.trains)t.observedAt=new Date(Date.now()-400000).toISOString();a.live.ui();a.render();}")
  assert page.evaluate('__SEOUL_APP__.getTrainInstances().length')==0
  record('stale-expire-no-fake-fallback',{'freshAfterError':0,'carsAfterExpiry':0})
+ # A healthy route remains fresh when another enabled route fails.
+ first={**station_row('서울역','TEST-1001'),'key':'1:TEST:1001','lineId':'1'}
+ feed['lines']=[{'lineId':'1','state':'ok','trains':[first]},
+                {'lineId':'2','state':'error','trains':[],'message':'Synthetic route failure'}]
+ feed['quotaWarning']='Synthetic fixture: daily cap cannot sustain this polling schedule.'
+ page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
+ assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==1
+ assert page.locator('[data-feed-state="1"]').inner_text()=='1 LIVE'
+ assert page.locator('[data-feed-state="2"]').inner_text()=='ERROR'
+ assert page.locator('#live-badge-label').inner_text()=='PARTIAL LIVE'
+ page.click('#live-badge')
+ assert page.locator('#coverage-body tr').count()==24
+ assert 'Synthetic route failure' in page.locator('#coverage-body').inner_text()
+ assert 'daily cap cannot sustain' in page.locator('#live-quota-warning').inner_text()
+ assert page.locator('#live-quota-warning').is_visible()
+ page.click('#close-live')
+ record('mixed-route-status',{'healthy':'1 LIVE','failed':'ERROR','global':'PARTIAL LIVE'})
  # Source palette is kept exactly, and light blue map + white panel applied.
  colors=page.evaluate('({allMatch:__SEOUL_APP__.data.lines.every(l=>l.color===l.originalColor),panel:getComputedStyle(document.querySelector(".sidebar")).backgroundColor,accent:getComputedStyle(document.documentElement).getPropertyValue("--accent")})')
  assert colors['allMatch'] and colors['panel']=='rgb(255, 255, 255)';record('metro-palette',colors)

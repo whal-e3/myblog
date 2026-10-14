@@ -18,7 +18,7 @@ async function load(entry) {
 }
 
 const core = await load('src/worker/subway-core.ts');
-const { Line2Engine, SqliteFeedStore } = await load('src/worker/subway-feed.ts');
+const { Line2Engine, SqliteFeedStore, SeoulLine2Feed } = await load('src/worker/subway-feed.ts');
 const worker = await load('src/worker/index.ts');
 
 function sqlite() {
@@ -42,6 +42,7 @@ const row = (number = '2001', other = {}) => ({
   statnTnm: '성수', directAt: '0', lstcarAt: '0', ...other,
 });
 const payload = (rows, total = rows.length) => ({ errorMessage: { code: 'INFO-000', total }, realtimePositionList: rows });
+const rowFor = (lineId, number = `${lineId}-001`) => row(number, { subwayId: core.FEEDS[lineId].providerId });
 
 test('normalizes KST observations and never invents a missing timestamp', () => {
   assert.equal(core.observationTime(row(), clockStart), '2026-10-13T05:00:00Z');
@@ -225,15 +226,15 @@ test('provider quota error is latched until the next KST day', async () => {
   let calls = 0;
   const fetcher = async () => {
     calls++;
-    return Response.json({ errorMessage: { code: 'ERROR-338', message: key } });
+    return Response.json({ errorMessage: { code: 'ERROR-337', message: key } });
   };
   const engine = new Line2Engine(store, key, fetcher, () => now);
   const first = await engine.positions();
-  assert.equal(first.lines[0].code, 'ERROR-338');
+  assert.equal(first.lines[0].code, 'ERROR-337');
   assert.equal(first.budget.used, 1);
   now += 61_000;
   const second = await engine.positions();
-  assert.equal(second.lines[0].code, 'ERROR-338');
+  assert.equal(second.lines[0].code, 'ERROR-337');
   assert.equal(calls, 1);
   assert.equal(second.budget.used, 1);
   now = Date.parse('2026-10-13T15:01:00Z');
@@ -241,6 +242,225 @@ test('provider quota error is latched until the next KST day', async () => {
   assert.equal(calls, 2);
   assert.equal(nextDay.budget.dateKST, '2026-10-14');
   assert.equal(nextDay.budget.used, 1);
+  db.close();
+});
+
+test('provider quota block applies to every enabled route in the shared object', async () => {
+  const { db, store } = sqlite();
+  let now = clockStart;
+  const names = [];
+  const fetcher = async url => {
+    names.push(decodeURIComponent(new URL(url).pathname.split('/').at(-1)));
+    return Response.json({ errorMessage: { code: 'ERROR-337', message: key } });
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => now, { enabled: ['1', '2'] });
+  assert.equal((await engine.positions(['1'])).lines[0].code, 'ERROR-337');
+  now += 61_000;
+  assert.equal((await engine.positions(['2'])).lines[0].code, 'ERROR-337');
+  assert.deepEqual(names, ['1호선']);
+  assert.equal(engine.status().budget.used, 1);
+  db.close();
+});
+
+test('ERROR-338 also blocks later routes without another provider request', async () => {
+  const { db, store, sql } = sqlite();
+  let now = clockStart;
+  let calls = 0;
+  const fetcher = async () => {
+    calls++;
+    return Response.json({ errorMessage: { code: 'ERROR-338', message: key } });
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => now, { enabled: ['1', '2'] });
+  assert.equal((await engine.positions(['1'])).lines[0].code, 'ERROR-338');
+  now += 61_000;
+  assert.equal((await engine.positions(['2'])).lines[0].code, 'ERROR-338');
+  assert.equal(calls, 1);
+  const restored = new SqliteFeedStore(sql);
+  assert.equal(restored.providerBlock(now), 'ERROR-338');
+  db.close();
+});
+
+test('rejected API key stops later routes on the same object', async () => {
+  const { db, store } = sqlite();
+  let calls = 0;
+  const fetcher = async () => {
+    calls++;
+    return Response.json({ errorMessage: { code: 'INFO-100', message: key } });
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => clockStart, { enabled: ['1', '2'] });
+  assert.equal((await engine.positions(['1'])).lines[0].code, 'INFO-100');
+  assert.equal((await engine.positions(['2'])).lines[0].code, 'INFO-100');
+  assert.equal(calls, 1);
+  assert.equal(engine.status().budget.used, 1);
+  db.close();
+});
+
+test('a provider quota signal on another route stops an in-flight snapshot before its next page', async () => {
+  const { db, store } = sqlite();
+  const reports = Array.from({ length: 1000 }, (_, index) => rowFor('1', String(index)));
+  let enterFirst;
+  let releaseFirst;
+  const firstEntered = new Promise(resolve => { enterFirst = resolve; });
+  const firstPageGate = new Promise(resolve => { releaseFirst = resolve; });
+  const calls = [];
+  const fetcher = async url => {
+    const name = decodeURIComponent(new URL(url).pathname.split('/').at(-1));
+    const start = Number(url.match(/\/realtimePosition\/(\d+)\//)[1]);
+    calls.push([name, start]);
+    if (name === '1호선') {
+      enterFirst();
+      await firstPageGate;
+      return Response.json(payload(reports, 1500));
+    }
+    return Response.json({ errorMessage: { code: 'ERROR-337', message: key } });
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => clockStart, { enabled: ['1', '2'] });
+  const first = engine.positions(['1']);
+  await firstEntered;
+  assert.equal((await engine.positions(['2'])).lines[0].code, 'ERROR-337');
+  releaseFirst();
+  assert.equal((await first).lines[0].code, 'ERROR-337');
+  assert.deepEqual(calls, [['1호선', 0], ['2호선', 0]]);
+  assert.equal(engine.status().budget.used, 2);
+  db.close();
+});
+
+test('status exposes the minimum all-line call demand and warns when the cap is too low', () => {
+  const { db, store, sql } = sqlite();
+  const single = new Line2Engine(store, key, async () => Response.json(payload([])), () => clockStart);
+  assert.equal(single.status().continuousDailyCallsMinimum, 720);
+  assert.equal(single.status().quotaWarning, null);
+  const all = new Line2Engine(store, key, async () => Response.json(payload([])), () => clockStart,
+    { enabled: core.enabledLines('all') });
+  assert.equal(all.status().continuousDailyCallsMinimum, 13_680);
+  assert.match(all.status().quotaWarning, /13\s?680|13680/);
+  assert.match(all.status().quotaWarning, /900/);
+  const approved = new Line2Engine(new SqliteFeedStore(sql, 15_000), key,
+    async () => Response.json(payload([])), () => clockStart, { enabled: core.enabledLines('all') });
+  assert.equal(approved.status().quotaWarning, null);
+  db.close();
+});
+
+test('all verified route names are available but only Line 2 is enabled by default', () => {
+  assert.equal(core.SUPPORTED_LINES.length, 19);
+  assert.deepEqual(core.enabledLines(), ['2']);
+  assert.deepEqual(core.enabledLines('2,GTX-A,2,경강'), ['2', 'GTX-A', '경강']);
+  assert.equal(core.enabledLines('all').length, 19);
+  assert.equal(core.FEEDS['GTX-A'].providerId, '1032');
+  assert.equal(core.normalizeRows([rowFor('GTX-A')], clockStart, 'GTX-A').trains[0].lineId, 'GTX-A');
+  assert.equal(core.normalizeRows([rowFor('GTX-A')], clockStart, 'GTX-A').trains[0].providerLineId, '1032');
+});
+
+test('multi-line positions preserve request order and separate empty, failed and live routes', async () => {
+  const { db, store } = sqlite();
+  const names = [];
+  const fetcher = async url => {
+    const name = decodeURIComponent(new URL(url).pathname.split('/').at(-1));
+    names.push(name);
+    if (name === '1호선') return Response.json(payload([rowFor('1')]));
+    if (name === '2호선') return Response.json({ errorMessage: { code: 'INFO-200' } });
+    if (name === 'GTX-A') return Response.json(payload([rowFor('GTX-A')]));
+    return Response.json({ errorMessage: { code: 'ERROR-500', message: key } });
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => clockStart,
+    { enabled: ['1', '2', 'GTX-A', '3'] });
+  const result = await engine.positions(['3', '2', 'GTX-A', '1']);
+  assert.deepEqual(result.lines.map(line => [line.lineId, line.state]),
+    [['3', 'error'], ['2', 'empty'], ['GTX-A', 'ok'], ['1', 'ok']]);
+  assert.deepEqual(result.lines[2].trains.map(train => train.providerLineId), ['1032']);
+  assert.equal(result.lines[0].message.includes(key), false);
+  assert.deepEqual(names.sort(), ['1호선', '2호선', '3호선', 'GTX-A'].sort());
+  assert.equal(result.budget.used, 4);
+  db.close();
+});
+
+test('one object merges concurrent visitors per line and reserves from one quota', async () => {
+  const { db, store, sql } = sqlite();
+  let now = clockStart;
+  const calls = { '1': 0, '2': 0 };
+  const fetcher = async url => {
+    const lineId = decodeURIComponent(new URL(url).pathname.split('/').at(-1))[0];
+    calls[lineId]++;
+    await new Promise(resolve => setTimeout(resolve, 15));
+    return Response.json(payload([rowFor(lineId)]));
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => now, { enabled: ['1', '2'] });
+  const results = await Promise.all(Array.from({ length: 10 }, () => engine.positions(['1', '2'])));
+  assert.deepEqual(calls, { '1': 1, '2': 1 });
+  assert.equal(results.every(result => result.lines.every(line => line.state === 'ok')), true);
+  assert.equal(results[0].budget.used, 2);
+  const restored = new Line2Engine(new SqliteFeedStore(sql), key, fetcher, () => now, { enabled: ['1', '2'] });
+  await restored.positions(['2', '1']);
+  assert.deepEqual(calls, { '1': 1, '2': 1 });
+  now += 121_000;
+  await engine.positions(['2']);
+  assert.deepEqual(calls, { '1': 1, '2': 2 });
+  assert.equal(engine.status().budget.used, 3);
+  db.close();
+});
+
+test('multi-line requests use at most three upstream calls at once', async () => {
+  const { db, store } = sqlite();
+  let active = 0;
+  let maximum = 0;
+  let calls = 0;
+  const fetcher = async url => {
+    calls++;
+    active++;
+    maximum = Math.max(maximum, active);
+    await new Promise(resolve => setTimeout(resolve, 4));
+    active--;
+    const name = decodeURIComponent(new URL(url).pathname.split('/').at(-1));
+    const lineId = core.SUPPORTED_LINES.find(id => core.FEEDS[id].name === name);
+    return Response.json(payload([rowFor(lineId)]));
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => clockStart,
+    { enabled: core.enabledLines('all') });
+  const result = await engine.positions(core.enabledLines('all'));
+  assert.equal(result.lines.length, 19);
+  assert.equal(result.lines.every(line => line.state === 'ok'), true);
+  assert.equal(calls, 19);
+  assert.ok(maximum <= 3 && maximum > 1);
+  assert.equal(result.budget.used, 19);
+  db.close();
+});
+
+test('all-line opt-in does not override the shared cap or invent freshness', async () => {
+  const { db, sql } = sqlite();
+  const store = new SqliteFeedStore(sql, 2);
+  let calls = 0;
+  const fetcher = async url => {
+    calls++;
+    const name = decodeURIComponent(new URL(url).pathname.split('/').at(-1));
+    const lineId = core.SUPPORTED_LINES.find(id => core.FEEDS[id].name === name);
+    return Response.json(payload([rowFor(lineId)]));
+  };
+  const engine = new Line2Engine(store, key, fetcher, () => clockStart,
+    { enabled: ['1', '2', '3'], pollSeconds: 120 });
+  const result = await engine.positions(['1', '2', '3']);
+  assert.equal(result.pollSeconds, 120);
+  assert.equal(result.budget.localLimit, 2);
+  assert.equal(result.budget.used, 2);
+  assert.deepEqual(result.lines.map(line => line.state), ['ok', 'ok', 'error']);
+  assert.equal(result.lines[2].code, 'LOCAL_QUOTA_LIMIT');
+  assert.equal(calls, 2);
+  assert.equal(result.lines[0].trains[0].observedAt, '2026-10-13T05:00:00Z');
+  db.close();
+});
+
+test('unconfigured object reports enabled and supported routes without fetching', async () => {
+  const { db, sql } = sqlite();
+  const object = new SeoulLine2Feed({ storage: { sql } },
+    { SEOUL_LIVE_LINES: 'all', SEOUL_DAILY_LIMIT: '1500', SEOUL_POLL_SECONDS: '120' });
+  const status = await (await object.fetch(new Request('http://localhost/api/live/status'))).json();
+  assert.equal(status.configured, false);
+  assert.equal(status.enabledLines.length, 19);
+  assert.equal(status.supportedLines.length, 19);
+  assert.equal(status.budget.localLimit, 1500);
+  const result = await (await object.fetch(new Request('http://localhost/api/live/positions?lines=1,GTX-A'))).json();
+  assert.deepEqual(result.lines.map(line => line.state), ['unconfigured', 'unconfigured']);
+  assert.equal(result.budget.used, 0);
+  assert.equal((await object.fetch(new Request('http://localhost/api/live/positions?lines=invalid'))).status, 400);
   db.close();
 });
 
@@ -255,12 +475,14 @@ test('Worker feed is gated locally; invalid lines and methods never reach the ob
   const base = 'http://localhost:8788/api/live/positions';
   assert.equal((await worker.default.fetch(new Request(`${base}?lines=2`), { ...env, SUBWAY_DEV_ENABLED: undefined })).status, 200);
   assert.equal(calls, 0);
-  assert.equal((await worker.default.fetch(new Request(`${base}?lines=1`), env)).status, 400);
+  assert.equal((await worker.default.fetch(new Request(`${base}?lines=not-a-line`), env)).status, 400);
+  assert.equal((await worker.default.fetch(new Request(`${base}?lines=1,1`), env)).status, 400);
+  assert.equal((await worker.default.fetch(new Request(`${base}?lines=1,2,GTX-A`), env)).status, 200);
   assert.equal((await worker.default.fetch(new Request(`${base}?lines=2`, { method: 'POST' }), env)).status, 405);
   assert.equal((await worker.default.fetch(new Request(`${base}?lines=2`, { headers: { Origin: 'https://evil.invalid' } }), env)).status, 403);
-  assert.equal(calls, 0);
-  assert.equal((await worker.default.fetch(new Request(`${base}?lines=2`), env)).status, 200);
   assert.equal(calls, 1);
+  assert.equal((await worker.default.fetch(new Request(`${base}?lines=2`), env)).status, 200);
+  assert.equal(calls, 2);
 });
 
 test('production-origin OAuth and admin asset routing remain available', async () => {

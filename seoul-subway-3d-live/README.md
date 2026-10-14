@@ -169,8 +169,10 @@ not at invented map positions. See `LICENSE-DATA.md` for provenance and transfor
 
 The adapter has candidate query mappings for Lines 1–9, AREX, Gyeongui–Jungang,
 Gyeongchun, Suin–Bundang, Shinbundang, Gyeonggang, Seohae, Ui–Sinseol, Sillim and GTX-A.
-**This list is not a claim that all those feeds are available or complete.** Availability
-is determined by the provider's response and your approved key. Incheon Lines 1/2,
+The provider's public sample returned rows for all 19 queries on 2026-10-14, but it only
+returned up to five rows per query. **That does not establish complete or fresh coverage
+with an approved key.** Availability is determined by the provider's actual response.
+Incheon Lines 1/2,
 Gimpo Goldline, Everline and Uijeongbu have no live adapter in this release and remain
 **MAP ONLY**. The five-record Line 2 diagnostic does not establish full-line coverage
 or availability for other routes.
@@ -182,7 +184,7 @@ Configuration lives in `.env`; environment variables take precedence:
 | Variable | Default | Meaning |
 |---|---|---|
 | `SEOUL_SUBWAY_API_KEY` | empty | Approved realtime-subway key; never served to clients |
-| `SEOUL_LIVE_LINES` | `2` | Line 2 live reports; other mapped lines remain map-only |
+| `SEOUL_LIVE_LINES` | `2` | Comma-separated provider route IDs, or `all` for 19 candidate feeds; enabling more lines requires sufficient approved quota |
 | `SEOUL_POLL_SECONDS` | `120` | Per-line minimum cache interval; at least 15 seconds |
 | `SEOUL_DAILY_LIMIT` | `900` | **Local protective cap**, below the provider's 1,000 daily requests |
 | `SEOUL_API_SCHEME` | `http` | Explicit upstream transport; see the security note |
@@ -191,8 +193,16 @@ The connector fetches each page until it has the full provider-reported line. Ev
 uses one request from the persisted daily budget, and an incomplete fetch is shown as an
 error rather than a new complete snapshot. One page every 120 seconds uses up to 720
 requests per day while the page is active; pagination can use more and may reach the
-900-request cap earlier. Reports older than 90 seconds are marked stale even during a
-healthy 120-second polling interval. The counter resets at midnight in Seoul.
+900-request cap earlier. Nineteen lines at 120-second polling need **at least 13,680
+requests per day**, before pagination, so the standard 1,000-call key and this 900-call
+protective cap cannot keep them all fresh. Setting `SEOUL_LIVE_LINES=all` under that cap
+will exhaust it; it does not make all 24 mapped routes live. The Seoul Open Data Plaza
+[explains how to request removal of the subway-key limit](https://data.seoul.go.kr/together/notice/faqList.do)
+after registering a working service in its gallery; its FAQ says a local URL is not
+eligible for review. This step belongs to the later publication session. Do not raise `SEOUL_DAILY_LIMIT`
+beyond the quota actually approved for your key. Reports older than 90 seconds are
+marked stale even during a healthy 120-second polling interval. The counter resets at
+midnight in Seoul.
 
 The local server shares a per-line cache, locks and a three-worker request pool across
 tabs. Hidden lines and hidden browser tabs do not start further polls; requests already

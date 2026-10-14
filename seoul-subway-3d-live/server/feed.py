@@ -5,6 +5,7 @@ Positions are station/status observations, NOT GPS coordinates.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 import threading
@@ -31,10 +32,11 @@ FEEDS = {
     '서해': ('서해선', '1093'),
     'W': ('우이신설선', '1092'),
     'Silim': ('신림선', '1094'),
-    'GTX-A': ('GTX-A', '1095'),
+    'GTX-A': ('GTX-A', '1032'),
 }
 DOCUMENTATION = 'https://data.seoul.go.kr/dataList/OA-12601/A/1/datasetView.do'
 PAGE_SIZE = 1000
+PROVIDER_QUOTA_CODES = frozenset(('ERROR-337', 'ERROR-338'))
 
 
 def iso(dt: datetime | None) -> str | None:
@@ -111,7 +113,7 @@ def parse_payload(raw: bytes) -> tuple[list[dict], int]:
             'INFO-100': 'The API key was rejected. Check that it is approved for the realtime subway service.',
             'ERROR-300': 'The provider rejected the request parameters.',
             'ERROR-331': 'The provider rejected the pagination range.',
-            'ERROR-337': 'The requested line is unavailable to this API key.',
+            'ERROR-337': 'The upstream daily API quota has been reached.',
             'ERROR-338': 'The upstream daily API quota has been reached.',
         }
         raise FeedError(safe_code, messages.get(safe_code, f'The upstream service returned {safe_code}. Check the official API documentation.'))
@@ -227,14 +229,24 @@ class FeedClient:
         self.auth_lock = threading.Lock()
         self.auth_error = False
         self.provider_quota_day = ''
+        self.provider_quota_code = ''
         # Shared pool: multiple tabs cannot start independent unbounded upstream pools.
         self.pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix='seoul-feed')
 
     def status(self):
+        # This assumes every enabled route is requested continuously and each
+        # snapshot fits in one page. Pagination can only increase the cost.
+        daily_calls = len(self.enabled) * math.ceil(86400 / self.poll_seconds)
+        quota_warning = None
+        if daily_calls > self.budget.limit:
+            quota_warning = (f'Continuous {self.poll_seconds}-second polling of {len(self.enabled)} enabled lines '
+                             f'needs at least {daily_calls} upstream calls per KST day, before pagination; '
+                             f'the local cap is {self.budget.limit}. Refreshes will stop at the cap.')
         return {'configured': self.configured, 'provider': 'Seoul TOPIS / realtimePosition',
                 'sourceUrl': DOCUMENTATION, 'pollSeconds': self.poll_seconds,
                 'freshSeconds': 90, 'expireSeconds': 300, 'enabledLines': self.enabled,
                 'supportedLines': list(FEEDS), 'budget': self.budget.snapshot(),
+                'continuousDailyCallsMinimum': daily_calls, 'quotaWarning': quota_warning,
                 'upstreamTransport': self.scheme, 'serverTime': iso(datetime.now(UTC))}
 
     def _request(self, url: str) -> bytes:
@@ -259,17 +271,19 @@ class FeedClient:
             error = None
             rows = []
             try:
-                with self.auth_lock:
-                    if self.auth_error:
-                        raise FeedError('INFO-100', 'The API key was rejected. Correct .env and restart the server.')
-                    if self.provider_quota_day == datetime.now(KST).strftime('%Y-%m-%d'):
-                        raise FeedError('ERROR-338', 'The provider quota is exhausted for today.')
                 # Fixed destination and named route allowlist; no client-controlled proxy URL.
                 name = quote(FEEDS[line_id][0], safe='')
                 start = 0
                 expected_total = None
                 previous_page = None
                 while True:
+                    # Recheck between pages: another line may have encountered the
+                    # provider-wide quota or key error during this snapshot.
+                    with self.auth_lock:
+                        if self.auth_error:
+                            raise FeedError('INFO-100', 'The API key was rejected. Correct .env and restart the server.')
+                        if self.provider_quota_day == datetime.now(KST).strftime('%Y-%m-%d'):
+                            raise FeedError(self.provider_quota_code or 'ERROR-337', 'The provider quota is exhausted for today.')
                     self.budget.reserve()
                     url = f'{self.scheme}://swopenapi.seoul.go.kr/api/subway/{quote(self.key, safe="")}/json/realtimePosition/{start}/{start+PAGE_SIZE}/{name}'
                     page, reported_total = parse_payload(self.transport(url))
@@ -307,8 +321,9 @@ class FeedClient:
                 with self.auth_lock:
                     if error.code == 'INFO-100':
                         self.auth_error = True
-                    if error.code == 'ERROR-338':
+                    if error.code in PROVIDER_QUOTA_CODES:
                         self.provider_quota_day = datetime.now(KST).strftime('%Y-%m-%d')
+                        self.provider_quota_code = error.code
                 item = {'lineId': line_id, 'state': 'error', 'code': error.code, 'message': error.message,
                         'trains': (old or {}).get('trains', []), 'fetchedAt': (old or {}).get('fetchedAt'),
                         'lastAttemptAt': iso(fetched)}

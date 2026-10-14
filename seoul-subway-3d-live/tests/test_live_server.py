@@ -10,11 +10,12 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import unquote
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from server.feed import FeedClient, FeedError, DailyBudget, parse_payload, observation_time, normalize_rows, KST, iso
+from server.feed import FEEDS, FeedClient, FeedError, DailyBudget, parse_payload, observation_time, normalize_rows, KST, iso
 spec=importlib.util.spec_from_file_location('local_server',ROOT/'server.py');webserver=importlib.util.module_from_spec(spec);spec.loader.exec_module(webserver)
 
 def row(**changes):
@@ -45,9 +46,12 @@ class AdapterTests(unittest.TestCase):
   rows=[row(),row(recptnDt='2026-10-13 13:59:00'),row(subwayId='1001')]
   ts,n=normalize_rows(rows,'2',datetime.now(KST));self.assertEqual(len(ts),1);self.assertEqual(n,1);self.assertTrue(ts[0]['observedAt'].endswith('05:00:00Z'))
  def test_provider_errors_redacted(self):
-  for body in [b'{"errorMessage":{"code":"INFO-100","message":"secret-key-url"}}',b'<RESULT><CODE>INFO-100</CODE><MESSAGE>secret-key-url</MESSAGE></RESULT>']:
+  cases=[(b'{"errorMessage":{"code":"INFO-100","message":"secret-key-url"}}','INFO-100'),
+         (b'<RESULT><CODE>INFO-100</CODE><MESSAGE>secret-key-url</MESSAGE></RESULT>','INFO-100'),
+         (b'{"errorMessage":{"code":"ERROR-337","message":"secret-key-url"}}','ERROR-337')]
+  for body,code in cases:
    with self.assertRaises(FeedError) as ctx:parse_payload(body)
-   self.assertEqual(ctx.exception.code,'INFO-100');self.assertNotIn('secret-key-url',str(ctx.exception))
+   self.assertEqual(ctx.exception.code,code);self.assertNotIn('secret-key-url',str(ctx.exception))
  def test_empty_and_invalid(self):
   self.assertEqual(parse_payload(b'{"code":"INFO-200"}'),([],0))
   for raw in [b'[]',b'<html>invalid</html>',b'{}',b'{"errorMessage":{"code":"INFO-000"},"realtimePositionList":[]}']:
@@ -67,6 +71,107 @@ class AdapterTests(unittest.TestCase):
   c=FeedClient(self.root,{'SEOUL_SUBWAY_API_KEY':'fixture'},lambda _:payload());self.clients.append(c)
   self.assertEqual(c.enabled,['2']);self.assertEqual(c.poll_seconds,120)
   self.assertEqual(c.budget.limit,900);self.assertEqual(c.scheme,'http')
+  self.assertEqual(c.status()['continuousDailyCallsMinimum'],720)
+  self.assertIsNone(c.status()['quotaWarning'])
+ def test_all_candidate_routes_can_be_configured_with_quota_warning(self):
+  c=self.client(SEOUL_LIVE_LINES='all',SEOUL_DAILY_LIMIT='900')
+  status=c.status()
+  self.assertEqual(len(FEEDS),19)
+  self.assertEqual(c.enabled,list(FEEDS))
+  self.assertEqual(status['continuousDailyCallsMinimum'],13680)
+  self.assertIn('before pagination',status['quotaWarning'])
+  self.assertIn('900',status['quotaWarning'])
+  self.assertEqual(c.poll_seconds,120)
+ def test_all_candidate_routes_normalize_distinct_provider_ids(self):
+  by_name={name:line_id for line_id,(name,_) in FEEDS.items()}
+  calls=[]
+  def provider(url):
+   name=unquote(url.rsplit('/',1)[1]);line_id=by_name[name];calls.append(line_id)
+   return payload([row(subwayId=FEEDS[line_id][1],trainNo=f'fixture-{line_id}')])
+  c=self.client(provider,SEOUL_LIVE_LINES='all')
+  lines=c.positions(list(FEEDS))['lines']
+  self.assertEqual(len(lines),19)
+  self.assertEqual(set(calls),set(FEEDS))
+  self.assertEqual(c.budget.snapshot()['used'],19)
+  for item in lines:
+   self.assertEqual(item['state'],'ok')
+   self.assertEqual(item['trains'][0]['lineId'],item['lineId'])
+   self.assertEqual(item['trains'][0]['providerLineId'],FEEDS[item['lineId']][1])
+  self.assertEqual(FEEDS['GTX-A'][1],'1032')
+ def test_mixed_line_error_does_not_block_other_lines(self):
+  calls=[]
+  def provider(url):
+   name=unquote(url.rsplit('/',1)[1]);calls.append(name)
+   if name=='GTX-A':return b'{"errorMessage":{"code":"ERROR-300"}}'
+   line_id={'1호선':'1','2호선':'2'}[name]
+   return payload([row(subwayId=FEEDS[line_id][1],trainNo=f'fixture-{line_id}')])
+  c=self.client(provider,SEOUL_LIVE_LINES='1,2,GTX-A',SEOUL_DAILY_LIMIT='10')
+  lines={item['lineId']:item for item in c.positions(['1','2','GTX-A'])['lines']}
+  self.assertEqual([lines[i]['state'] for i in ('1','2','GTX-A')],['ok','ok','error'])
+  self.assertEqual(lines['GTX-A']['code'],'ERROR-300')
+  self.assertEqual(lines['GTX-A']['trains'],[])
+  self.assertEqual(c.budget.snapshot()['used'],3)
+  c.positions(['1','2','GTX-A'])
+  self.assertEqual(len(calls),3)
+ def test_provider_quota_latches_across_lines_until_kst_day_changes(self):
+  for code in ('ERROR-337','ERROR-338'):
+   with self.subTest(code=code):
+    calls=[]
+    def provider(url):
+     calls.append(url)
+     return json.dumps({'errorMessage':{'code':code,'message':'secret-key-url'}}).encode()
+    c=self.client(provider,SEOUL_LIVE_LINES='1,2',SEOUL_DAILY_LIMIT='10')
+    starting_calls=c.budget.snapshot()['used']
+    first=c.line('1')
+    second=c.line('2')
+    c.cache['1']['nextAttempt']=0
+    repeated=c.line('1')
+    self.assertEqual([first['code'],second['code'],repeated['code']],[code]*3)
+    self.assertEqual([first['state'],second['state'],repeated['state']],['error']*3)
+    self.assertEqual(len(calls),1)
+    self.assertEqual(c.budget.snapshot()['used'],starting_calls+1)
+    self.assertNotIn('secret-key-url',json.dumps([first,second,repeated]))
+    c.provider_quota_day=(datetime.now(KST)-timedelta(days=1)).strftime('%Y-%m-%d')
+    c.cache['2']['nextAttempt']=0
+    c.transport=lambda url:payload([row(subwayId=FEEDS['2'][1])])
+    self.assertEqual(c.line('2')['state'],'ok')
+    self.assertEqual(c.budget.snapshot()['used'],starting_calls+2)
+ def test_provider_quota_interrupts_another_lines_pagination(self):
+  page_started=threading.Event();release_page=threading.Event();calls=[]
+  def provider(url):
+   name=unquote(url.rsplit('/',1)[1]);calls.append(name)
+   if name=='2호선':return b'{"errorMessage":{"code":"ERROR-337"}}'
+   page_started.set()
+   if not release_page.wait(3):raise TimeoutError()
+   return payload([row(subwayId='1001',trainNo=f'fixture-{n:04d}') for n in range(1000)],total=1500)
+  c=self.client(provider,SEOUL_LIVE_LINES='1,2',SEOUL_DAILY_LIMIT='10')
+  with ThreadPoolExecutor(max_workers=2) as pool:
+   pending=pool.submit(c.line,'1')
+   try:
+    self.assertTrue(page_started.wait(3))
+    self.assertEqual(c.line('2')['code'],'ERROR-337')
+   finally:release_page.set()
+   first=pending.result(timeout=3)
+  self.assertEqual(first['state'],'error')
+  self.assertEqual(first['code'],'ERROR-337')
+  self.assertEqual(first['trains'],[])
+  self.assertEqual(calls.count('1호선'),1)
+  self.assertEqual(c.budget.snapshot()['used'],2)
+ def test_multi_line_budget_is_shared_and_never_exceeded(self):
+  calls=[]
+  def provider(url):
+   name=unquote(url.rsplit('/',1)[1]);calls.append(name)
+   line_id={'1호선':'1','2호선':'2'}[name]
+   return payload([row(subwayId=FEEDS[line_id][1],trainNo=f'fixture-{line_id}')])
+  c=self.client(provider,SEOUL_LIVE_LINES='1,2,GTX-A',SEOUL_DAILY_LIMIT='2')
+  self.assertEqual(c.line('1')['state'],'ok')
+  self.assertEqual(c.line('2')['state'],'ok')
+  third=c.line('GTX-A')
+  self.assertEqual(third['state'],'error')
+  self.assertEqual(third['code'],'LOCAL_QUOTA_LIMIT')
+  self.assertEqual(third['trains'],[])
+  self.assertEqual(c.budget.snapshot()['used'],2)
+  self.assertEqual(calls,['1호선','2호선'])
  def test_all_reported_pages_are_fetched(self):
   records=[row(trainNo=f'fixture-{n:04d}') for n in range(3501)]
   calls=[]

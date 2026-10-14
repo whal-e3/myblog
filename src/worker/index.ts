@@ -28,6 +28,7 @@
 // Everything else falls through to static assets (Astro build output).
 
 import { SeoulLine2Feed } from "./subway-feed";
+import { requestedLines } from "./subway-core";
 export { SeoulLine2Feed };
 
 // Minimal runtime types for the Cloudflare globals used by this Worker.
@@ -108,8 +109,9 @@ async function handleSubway(request: Request, url: URL, namespace: SubwayFeedNam
   }
   if (url.pathname === "/api/live/positions") {
     const entries = [...url.searchParams.entries()];
-    if (entries.length > 1 || (entries.length === 1 && (entries[0][0] !== "lines" || entries[0][1] !== "2"))) {
-      return json({ error: "Only Line 2 is enabled." }, 400);
+    if (entries.length > 1 || (entries.length === 1 &&
+        (entries[0][0] !== "lines" || !requestedLines(entries[0][1])))) {
+      return json({ error: "Invalid line selection." }, 400);
     }
   }
   const stub = namespace.get(namespace.idFromName("line-2"));
