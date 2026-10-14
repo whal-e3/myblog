@@ -37,23 +37,6 @@ https://www.kogl.or.kr/info/license.do
 Boundary layers remain separately licensed and are not relicensed under MIT.
 The original upstream basemap includes the source attribution metadata.
 
-## Korean Peninsula locator
-
-The small geographic locator in `index.html` uses the North Korea (`PRK`) and
-South Korea (`KOR`) polygons from **Natural Earth 1:10m Admin-0 Countries**:
-https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/
-
-The source GeoJSON was taken from `nvkelso/natural-earth-vector`, pinned to
-commit `ca96624a56bd078437bca8184e78163e5039ad19`:
-https://github.com/nvkelso/natural-earth-vector/blob/ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_10m_admin_0_countries.geojson
-
-The inset retains polygons of at least 0.006 square degrees, including Jeju
-and Ulleungdo, simplifies their outer rings with a 0.025-degree tolerance,
-and projects them into the inline SVG. The Seoul dot is placed at the map's
-existing approximate geographic origin (37.53° N, 126.98° E); it is not a
-surveyed boundary of the subway network. Natural Earth data is public domain:
-https://www.naturalearthdata.com/about/terms-of-use/
-
 ## Station metadata
 
 The upstream source also credits Wikidata, CC0.

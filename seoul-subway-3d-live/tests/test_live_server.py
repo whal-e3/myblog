@@ -82,6 +82,14 @@ class AdapterTests(unittest.TestCase):
   self.assertIn('before pagination',status['quotaWarning'])
   self.assertIn('900',status['quotaWarning'])
   self.assertEqual(c.poll_seconds,120)
+ def test_three_second_all_route_setting_exposes_unsustainable_call_demand_without_fetching(self):
+  def trap(url):raise AssertionError('Status must not fetch provider data')
+  c=self.client(trap,SEOUL_LIVE_LINES='all',SEOUL_POLL_SECONDS='3',SEOUL_DAILY_LIMIT='900')
+  status=c.status()
+  self.assertEqual(status['pollSeconds'],3)
+  self.assertEqual(status['continuousDailyCallsMinimum'],547200)
+  self.assertIn('547200',status['quotaWarning'])
+  self.assertEqual(status['budget']['used'],0)
  def test_all_candidate_routes_normalize_distinct_provider_ids(self):
   by_name={name:line_id for line_id,(name,_) in FEEDS.items()}
   calls=[]

@@ -28,12 +28,13 @@ def load(browser,**kw):
  page=browser.new_page(**kw);page.on('pageerror',lambda e:results['errors'].append(str(e)))
  page.expose_function('__fixtureFetch',fixture)
  page.evaluate('()=>{window.fetch=async url=>new Response(await window.__fixtureFetch(url),{status:200,headers:{"Content-Type":"application/json"}});}')
- page.set_content(args.html.read_text(),wait_until='load');page.wait_for_function('!!window.__SEOUL_APP__');page.wait_for_timeout(600);return page
+ page.set_content(args.html.read_text(encoding='utf-8'),wait_until='load');page.wait_for_function('!!window.__SEOUL_APP__');page.wait_for_timeout(600);return page
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path=args.chromium,headless=True,args=['--no-sandbox','--enable-unsafe-swiftshader','--use-angle=swiftshader'])
  page=load(b,viewport={'width':1440,'height':950})
  assert page.evaluate('__SEOUL_APP__.fleet.trains.length')==0
  assert page.locator('#live-badge-label').inner_text()=='FEED NOT CONFIGURED'
+ assert page.locator('#motion-toggle').is_disabled() and not page.locator('#motion-toggle').is_checked()
  record('no-key-no-synthetic-trains',{'trains':0,'apiCalls':len(calls)})
  page.click('#scope-core');page.wait_for_timeout(1000)
  # Real mouse gesture; the projected world anchor must follow the exact screen delta.
@@ -123,12 +124,32 @@ with sync_playwright() as p:
  # Watermark test-only screenshot to prevent interpreting fixture trains as actual live evidence.
  page.evaluate('''()=>{const p=document.createElement('div');p.id='qa-watermark';p.textContent='TEST FIXTURE — NOT LIVE DATA';Object.assign(p.style,{position:'fixed',bottom:'4px',left:'32%',background:'#fff',color:'#ad1d35',zIndex:99999,padding:'5px 10px',font:'bold 10px sans-serif',border:'1px solid #ad1d35'});document.body.append(p);}''')
  page.screenshot(path=str(args.output.parent/'fixture-train-desktop.png'))
- # A subsequent report of the same identifier at the next station: one short interpolation then stop.
+ # A subsequent report of the same identifier at the next station: three seconds of visual interpolation then stop.
  feed['lines'][0]['trains']=[station_row('역삼',seconds=-1)]
  rr=page.evaluate('''async()=>{const a=__SEOUL_APP__;await a.live.refresh();const t=a.fleet.trains[0],p=a.live.pose(t,0,.025,true);return {transition:!!t.transition,beginX:p.x,targetX:t.station.x,selected:a.state.selectedTrain};}''')
- assert rr['transition'] and abs(rr['beginX']-rr['targetX'])>.1 and rr['selected']==0;page.wait_for_timeout(1300)
- rr=page.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0],p=a.live.pose(t,0,.025,true);return {x:p.x,target:t.station.x,interpolating:a.live.interpolating(t)};}''')
+ assert rr['transition'] and abs(rr['beginX']-rr['targetX'])>.1 and rr['selected']==0
+ rr=page.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0];t.transition.start-=3500;const p=a.live.pose(t,0,.025,true);return {x:p.x,target:t.station.x,interpolating:a.live.interpolating(t)};}''')
  assert abs(rr['x']-rr['target'])<1e-8 and not rr['interpolating'];record('successive-reports-end-at-observation',rr)
+ # With motion enabled, an unambiguous departed report may move a short estimated distance.
+ moving=load(b,viewport={'width':1440,'height':950},reduced_motion='no-preference')
+ assert moving.locator('#motion-toggle').is_checked()
+ feed['lines'][0]['trains']=[station_row('강남',seconds=-5)]
+ moving.evaluate('async()=>await __SEOUL_APP__.live.refresh()')
+ feed['lines'][0]['trains']=[station_row('역삼',seconds=-3)]
+ moving.evaluate('''async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.fleet.trains[0].transition.start-=3500;}''')
+ feed['lines'][0]['trains']=[{**station_row('역삼',seconds=-1),'status':'2'}]
+ rr=moving.evaluate('''async()=>{const a=__SEOUL_APP__;await a.live.refresh();a.selectTrain(0);
+  const t=a.fleet.trains[0],m=t.transition;m.start-=1500;a.render();const p=a.live.pose(t,0,.025,true),fixed=a.live.pose(t,0,.025,false);
+  return {motion:m.kind,moved:Math.hypot(p.x-fixed.x,p.z-fixed.z),progress:m.to,segment:m.path.total,card:document.querySelector('#train-model-status').textContent};}''')
+ assert rr['motion']=='estimate' and 0<rr['moved']<.08 and rr['progress']<=rr['segment']*.06
+ moving.evaluate('__SEOUL_APP__.live.ui()')
+ assert 'TRACK POSITION ESTIMATED' in moving.locator('#train-model-status').inner_text()
+ moving.click('#train-pause')
+ assert not moving.locator('#motion-toggle').is_checked()
+ assert moving.evaluate('__SEOUL_APP__.fleet.trains[0].transition===null')
+ assert moving.evaluate('''()=>{const a=__SEOUL_APP__,t=a.fleet.trains[0],p=a.live.pose(t,0,.025,a.state.motion);return p.x===t.station.x&&p.z===t.station.z;}''')
+ record('estimated-motion-labeled-and-optional',rr)
+ moving.close()
  # Reordering preserves selected train ID, unknown stations excluded.
  feed['lines'][0]['trains']=[station_row('선릉','TEST-2002'),station_row('역삼'),station_row('NOT A STATION','UNKNOWN')]
  page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
@@ -184,7 +205,8 @@ with sync_playwright() as p:
  assert mobile.evaluate('__SEOUL_APP__.goal.scale')<scale
  assert mobile.evaluate('document.documentElement.scrollWidth<=innerWidth')
  record('mobile-touch-controls',{'panDelta':[45,30],'pinchZoom':True,'noHorizontalOverflow':True})
- mobile.click('#live-badge');assert mobile.locator('#live-dialog').evaluate('(e)=>e.open');mobile.click('#close-live')
+ assert mobile.locator('#live-notice-connect').is_visible()
+ mobile.click('#live-notice-connect');assert mobile.locator('#live-dialog').evaluate('(e)=>e.open');mobile.click('#close-live')
  mobile.screenshot(path=str(args.output.parent/'no-key-mobile.png'))
  record('browser-errors',{'count':len(results['errors'])})
  assert not results['errors'],results['errors']

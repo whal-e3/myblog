@@ -339,6 +339,12 @@ test('status exposes the minimum all-line call demand and warns when the cap is 
   assert.equal(all.status().continuousDailyCallsMinimum, 13_680);
   assert.match(all.status().quotaWarning, /13\s?680|13680/);
   assert.match(all.status().quotaWarning, /900/);
+  const requestedCadence = new Line2Engine(store, key, async () => Response.json(payload([])), () => clockStart,
+    { enabled: core.enabledLines('all'), pollSeconds: 3 });
+  assert.equal(requestedCadence.status().pollSeconds, 3);
+  assert.equal(requestedCadence.status().continuousDailyCallsMinimum, 547_200);
+  assert.match(requestedCadence.status().quotaWarning, /547200/);
+  assert.equal(requestedCadence.status().budget.used, 0);
   const approved = new Line2Engine(new SqliteFeedStore(sql, 15_000), key,
     async () => Response.json(payload([])), () => clockStart, { enabled: core.enabledLines('all') });
   assert.equal(approved.status().quotaWarning, null);
@@ -455,9 +461,10 @@ test('all-line opt-in does not override the shared cap or invent freshness', asy
 test('unconfigured object reports enabled and supported routes without fetching', async () => {
   const { db, sql } = sqlite();
   const object = new SeoulLine2Feed({ storage: { sql } },
-    { SEOUL_LIVE_LINES: 'all', SEOUL_DAILY_LIMIT: '1500', SEOUL_POLL_SECONDS: '120' });
+    { SEOUL_LIVE_LINES: 'all', SEOUL_DAILY_LIMIT: '1500', SEOUL_POLL_SECONDS: '3' });
   const status = await (await object.fetch(new Request('http://localhost/api/live/status'))).json();
   assert.equal(status.configured, false);
+  assert.equal(status.pollSeconds, 3);
   assert.equal(status.enabledLines.length, 19);
   assert.equal(status.supportedLines.length, 19);
   assert.equal(status.budget.localLimit, 1500);

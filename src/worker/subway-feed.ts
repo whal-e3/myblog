@@ -332,7 +332,7 @@ export class SeoulLine2Feed extends DurableObject {
   constructor(state: DurableState, env: DurableEnv) {
     super(state, env);
     const dailyLimit = configuredInteger(env.SEOUL_DAILY_LIMIT, DAILY_LIMIT, 1, 1_000_000, "SEOUL_DAILY_LIMIT");
-    const pollSeconds = configuredInteger(env.SEOUL_POLL_SECONDS, POLL_SECONDS, 15, 3600, "SEOUL_POLL_SECONDS");
+    const pollSeconds = configuredInteger(env.SEOUL_POLL_SECONDS, POLL_SECONDS, 3, 3600, "SEOUL_POLL_SECONDS");
     this.engine = new SubwayFeedEngine(
       new SqliteFeedStore(state.storage.sql, dailyLimit), env.SEOUL_SUBWAY_API_KEY?.trim() ?? "",
       fetch, Date.now, { enabled: enabledLines(env.SEOUL_LIVE_LINES), pollSeconds },

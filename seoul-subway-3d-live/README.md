@@ -14,7 +14,7 @@ its local runtime and public hosting have not yet been verified against the live
 ## Dark mode and upgrading an existing installation
 
 Use the **sun / moon button in the top-right header** to switch between light and dark.
-The dark palette covers the map surface, station labels and markers, minimap, train
+The dark palette covers the map surface, station labels and markers, train
 inspector, dialogs, menus, and exported PNGs. The dataset's route colors are unchanged.
 Theme switching does not reset the camera, selected stations/lines/trains, smoothing,
 follow mode, feed state, or API settings.
@@ -112,11 +112,12 @@ per-client limits, and a shared server-side feed cache.
   and auto-orbit, but do not stop real data updates.
 - Click a train, or press **T**, to inspect its four-car mesh and reported station,
   destination, train number, direction, status, and source timestamp. The model preview
-  itself rotates on drag. **Follow train** follows new reports, not a simulated path.
+  itself rotates on drag. **Follow train** follows the displayed model; any movement
+  between reports is labeled as an estimate.
 - The single 3D view includes line visibility and isolation, Korean/English station
-  search, the Korea locator and network overview, image export, geometry export,
+  search, image export, geometry export,
   and keyboard controls.
-  **Space** toggles brief visual smoothing, not the feed or real-world trains. Use
+  **Space** toggles brief visual motion, not the feed or real-world trains. Use
   **Pause updates** for the actual polling control.
 
 The interface uses transit blue (`#0052A4`), white panels, navy text, and a pale-blue map.
@@ -133,26 +134,29 @@ station name**, including a small explicit alias table. Ambiguous or unmatched s
 are excluded and counted; the adapter never picks a nearby station as a silent guess.
 Missing/invalid timestamps are not replaced with the current time.
 
-**These are station/status observations, not continuous GPS coordinates.** A model is
-anchored to the reported station even when its provider status says “approaching” or
-“departed.” The app does not know its exact position inside the adjacent tunnel.
+**These are station/status observations, not continuous GPS coordinates.** The
+reported station remains the observation anchor. The app does not know a train's
+exact position inside the adjacent tunnel.
 The original four-car mesh, exaggerated dimensions, heading and vertical line offsets
 are illustrative, not measured rolling-stock or engineering geometry.
 
 When two consecutive observations report the same train at **adjacent mapped stations**,
-optional smoothing joins those received stations over **1.2 seconds**. It is a short
-visual transition, not an assertion that the train travelled at that speed, nor an
-estimate extrapolated to the present. Branch jumps, unmatched links and non-adjacent
-reports snap to the received station rather than inventing a route. After the transition
-ends, the train stays at the reported station until the next update. The former
-random/simulated train generator is removed from this version.
+optional smoothing joins those received stations over **three seconds**. When a newer,
+fresh report says **departed**, the display may also move a model a short distance
+along the next segment if the previous reported station establishes one unambiguous
+outgoing track. This is an explicitly labeled visual estimate, not a measured position,
+speed, or arrival prediction. It stops well before the next station; branches,
+disconnected or non-adjacent reports, missing route history, stale reports, failures,
+and paused updates do not start an estimate. Duplicate reports do not restart motion.
+Disabling smoothing or using a reduced-motion setting leaves models at their reported
+stations. The former random/simulated train generator is removed from this version.
 
 Freshness is determined from each provider timestamp (Korean time is parsed explicitly):
 
 | Condition | Presentation |
 |---|---|
 | Age up to 90 seconds, feed healthy | Fresh report; included in fresh train count |
-| Older than 90 seconds, update error, or polling paused | Stale label and reduced-opacity train |
+| Older than 90 seconds, update error, or polling paused | Stale label and reduced-opacity train; estimated movement stops |
 | Older than 300 seconds, unknown time, or invalid future time | Not rendered as a live train |
 | No key, missing/unsupported feed, or empty response | No simulated replacement trains |
 
@@ -186,8 +190,8 @@ Configuration lives in `.env`; environment variables take precedence:
 | Variable | Default | Meaning |
 |---|---|---|
 | `SEOUL_SUBWAY_API_KEY` | empty | Approved realtime-subway key; never served to clients |
-| `SEOUL_LIVE_LINES` | `2` | Comma-separated provider route IDs, or `all` for 19 candidate feeds; enabling more lines requires sufficient approved quota |
-| `SEOUL_POLL_SECONDS` | `120` | Per-line minimum cache interval; at least 15 seconds |
+| `SEOUL_LIVE_LINES` | `2` | Comma-separated provider route IDs, or `all` for the 19 surveyed feeds; enabling more lines requires sufficient approved quota |
+| `SEOUL_POLL_SECONDS` | `120` | Per-line minimum cache interval; accepts 3–3,600 seconds, subject to your approved quota |
 | `SEOUL_DAILY_LIMIT` | `900` | **Local protective cap**, below the provider's 1,000 daily requests |
 | `SEOUL_API_SCHEME` | `http` | Explicit upstream transport; see the security note |
 
@@ -215,6 +219,13 @@ current local KST day as a precaution, without claiming the provider's cause or 
 time. The local request counter is persisted in `.runtime/api-usage.json`; restarting
 does not reset it. Usage by other clients of the same key is not included. Keep one
 server instance per project/runtime directory.
+
+Three-second polling of all 19 supported routes would require at least **547,200
+requests/day** before pagination. The connector accepts that interval for a key with
+explicitly approved capacity, but the current 900-call cap would be reached after roughly
+142 seconds if all 19 routes were continuously polled. There is no documented bulk
+position request for multiple lines, and the app does not silently substitute station
+arrival data for train positions.
 
 ## Troubleshooting
 
@@ -259,7 +270,7 @@ it additionally requires `shapely` and `text_unidecode`. Original source data ar
 `server/feed.py` handles the fixed TOPIS endpoint, normalization, timestamps, pagination,
 cache, quota and sanitized failures. `server.py` handles same-origin HTTP and asset
 whitelisting. `src/live.js` handles station matching, persistent train identity, freshness,
-report-to-report interpolation, polling and connection UI. `src/trains.js` supplies the
+bounded visual motion, polling and connection UI. `src/trains.js` supplies the
 original triangle meshes, instanced WebGL rendering and software fallback. `src/app.js`
 contains map projection, navigation and scene interaction; `src/styles.css` contains the
 Metro-inspired palette and responsive layout.

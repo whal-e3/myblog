@@ -9,9 +9,9 @@ tags:
 comments: false
 ---
 
-I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. It opens from above and eases into a 3D view of 24 mapped lines and 659 stations. You can search for stations, rotate the map, and use a Korea locator to see where this Seoul-area network sits on the peninsula.
+I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. It opens from above and eases into a 3D view of 24 mapped lines and 659 stations. You can search for stations, rotate the map, and explore the network from different angles.
 
-The live layer can show station-level train reports from Seoul's official `realtimePosition` API when the server has an approved key. All 19 connected routes returned full provider-reported snapshots in a local test, but only Line 2 is enabled by default under the standard daily request limit. Incheon Lines 1 and 2, Gimpo Goldline, Everline, and Uijeongbu remain map-only until a suitable live source is available. Each report names a station and a report time; it is **not GPS tracking or an arrival prediction**. The map remains explorable when the feed is unavailable.
+The live layer can show station-level train reports from Seoul's official `realtimePosition` API when the server has an approved key. All 19 connected routes returned full provider-reported snapshots in a local test, but only Line 2 is enabled by default under the standard daily request limit. Incheon Lines 1 and 2, Gimpo Goldline, Everline, and Uijeongbu remain map-only until a suitable live source is available. Each report names a station and a report time; it is **not GPS tracking or an arrival prediction**. Brief model movement between reports is a labeled visual estimate on unambiguous track, while the reported station remains visible. The map remains explorable when the feed is unavailable.
 
 <a href="/miniprj/seoul-subway/" data-astro-reload>Open the subway map →</a>
 

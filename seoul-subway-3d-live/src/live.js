@@ -1,11 +1,13 @@
 /* Seoul Subsurface live adapter, MIT. No synthetic fleet is created here.
  * Reported station/status from Seoul TOPIS realtimePosition is NOT GPS.
- * Optional 1.2 s visual interpolation joins ONLY consecutive adjacent-station reports.
- * Never extrapolate a train beyond a reported station or invent trains when a feed fails.
+ * Visual interpolation joins adjacent observations. A fresh departed report can
+ * also produce a short, explicitly estimated motion on an unambiguous track.
+ * Neither mode invents a train, observation, route, or arrival time.
  */
 (() => {
   'use strict';
-  const FRESH=90, EXPIRE=300;
+  const FRESH=90, EXPIRE=300, MOTION_MS=3000;
+  const ESTIMATE_FRACTION=.06, ESTIMATE_DISTANCE=.08;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const $=id=>document.getElementById(id);
   const clean=s=>String(s||'').normalize('NFKC').replace(/\([^)]*\)/g,'').replace(/[\s·.\-_]/g,'').toLowerCase();
@@ -58,6 +60,12 @@
       if(list.length){const e=list[0],from=e.a===s.id?e.b:e.a,p=oriented(e,from);return{path:p,d:p.total};}
       return {path:path([[s.x-.01,s.z],[s.x,s.z],[s.x+.01,s.z]]),d:.01};
     }
+    function outgoingPath(li,station,previous){
+      if(!previous||!edgeBetween(li,previous.id,station.id))return null;
+      const candidates=(adj[li].get(station.id)||[]).filter(e=>e.a!==previous.id&&e.b!==previous.id);
+      if(candidates.length!==1||candidates[0].path.total>12)return null;
+      const e=candidates[0];return {path:oriented(e,station.id),nextId:e.a===station.id?e.b:e.a};
+    }
     function age(train,now=Date.now()+source.clockOffset){return (now-stamp(train.observedAt))/1000;}
     function quality(train){const a=age(train);return !Number.isFinite(a)||a< -60||a>EXPIRE?'expired':train.sourceError||source.paused||a>FRESH?'stale':'fresh';}
     function apply(payload){
@@ -67,7 +75,7 @@
       if(Array.isArray(payload.enabledLines))source.enabledLines=payload.enabledLines;
       if(Array.isArray(payload.supportedLines))source.supportedLines=payload.supportedLines;
       if(typeof payload.quotaWarning==='string'||payload.quotaWarning===null)source.quotaWarning=payload.quotaWarning;
-      source.pollSeconds=clamp(Number(payload.pollSeconds)||120,15,3600);source.lines=payload.lines||[];source.budget=payload.budget||null;source.upstreamTransport=payload.upstreamTransport;
+      source.pollSeconds=clamp(Number(payload.pollSeconds)||120,3,3600);source.lines=payload.lines||[];source.budget=payload.budget||null;source.upstreamTransport=payload.upstreamTransport;
       const serverTime=stamp(payload.serverTime);if(Number.isFinite(serverTime))source.clockOffset=serverTime-Date.now();source.serverTime=payload.serverTime;
       for(const line of source.lines){
         const li=lineById.get(line.lineId);if(li===undefined)continue;
@@ -79,17 +87,40 @@
           if(!Number.isFinite(a)){stats.unknownTime++;continue;}if(a< -60||a>EXPIRE){stats.expired++;continue;}
           const prev=old.get(row.key);
           // Ignore regressing observations rather than move a train backwards in time.
-          const regressed=prev&&stamp(row.observedAt)<stamp(prev.observedAt);
+          const regressed=prev&&(stamp(row.observedAt)<stamp(prev.observedAt)||
+            (row.observedAt===prev.observedAt&&s.id!==prev.station.id));
           const same=prev&&row.observedAt===prev.observedAt&&s.id===prev.station.id;
           let train;
-          if(same||regressed){train={...prev,...(regressed?{}:row),sourceError:line.state==='error'};}
+          if(same||regressed){
+            train={...prev,...(regressed?{}:row),sourceError:line.state==='error'};
+            if(line.state==='error'||String(train.status)!=='2'&&train.transition?.kind==='estimate')train.transition=null;
+          }
           else{
             const target=prev?.station.id===s.id?prev.target:stationaryPath(li,s,prev?.station);
-            train={...row,line:li,station:s,target,sourceError:line.state==='error',transition:null};
-            if(prev&&prev.station.id!==s.id&&prev.direction===row.direction&&a<=FRESH&&age(prev)<=180){
+            const previousStation=prev&&prev.direction===row.direction?
+              (prev.station.id===s.id?prev.previousStation:(edgeBetween(li,prev.station.id,s.id)?prev.station:null)):null;
+            const previousStationAt=previousStation?(prev.station.id===s.id?prev.previousStationAt:prev.observedAt):null;
+            train={...row,line:li,station:s,target,previousStation,previousStationAt,sourceError:line.state==='error',transition:null};
+            if(prev&&prev.station.id!==s.id&&prev.direction===row.direction&&a<=FRESH&&age(prev)<=180&&line.state!=='error'){
               const e=edgeBetween(li,prev.station.id,s.id);
               // No inferred routing through an interchange or a disconnected branch.
-              if(e&&e.path.total<=12){train.transition={path:oriented(e,prev.station.id),start:performance.now(),duration:1200};}
+              if(e&&e.path.total<=12&&(!prev.transition||prev.transition.kind!=='estimate'||prev.transition.nextId===s.id)){
+                const p=oriented(e,prev.station.id);
+                let from=0;
+                // An earlier bounded estimate on this same edge must not rewind.
+                if(prev.transition?.kind==='estimate'&&prev.transition.nextId===s.id&&quality(prev)==='fresh'){
+                  from=motionDistance(prev.transition);
+                }
+                train.transition={kind:'observed',path:p,from,to:p.total,start:performance.now(),duration:MOTION_MS};
+              }
+            }else if(prev&&prev.station.id===s.id&&prev.direction===row.direction&&['0','1'].includes(String(row.direction))&&String(row.status)==='2'&&a<=FRESH&&age(prev)<=FRESH&&
+              previousStationAt&&(Date.now()+source.clockOffset-stamp(previousStationAt))/1000<=180&&line.state!=='error'){
+              if(prev.transition?.kind==='estimate')train.transition=prev.transition;
+              else if(prev.transition?.kind==='observed'&&interpolating(prev))train.transition=prev.transition;
+              else{
+                const onward=outgoingPath(li,s,previousStation);
+                if(onward){const p=onward.path;train.transition={kind:'estimate',path:p,nextId:onward.nextId,from:0,to:Math.min(p.total*ESTIMATE_FRACTION,ESTIMATE_DISTANCE),start:performance.now(),duration:MOTION_MS};}
+              }
             }
           }
           train.id=incoming.length;incoming.push(train);
@@ -105,11 +136,16 @@
       const end=d<0?0:p.total,c=T.sample(p,end),extra=d-end;
       return {...c,x:c.x+c.dx*extra,z:c.z+c.dz*extra};
     }
+    function motionDistance(m){const f=clamp((performance.now()-m.start)/m.duration,0,1);return m.from+(m.to-m.from)*f*f*(3-2*f);}
+    function motionKind(train,smooth=true){
+      if(!smooth||!train.transition||quality(train)!=='fresh'||typeof document!=='undefined'&&document.hidden)return null;
+      if(train.transition.kind==='observed'&&performance.now()-train.transition.start>=train.transition.duration)return null;
+      return train.transition.kind;
+    }
     function pose(train,ignored,requestedScale,smooth=true){
       let p=train.target.path,d=train.target.d;
-      if(smooth&&train.transition&&quality(train)==='fresh'){
-        const f=clamp((performance.now()-train.transition.start)/train.transition.duration,0,1);
-        if(f<1){p=train.transition.path;d=p.total*(f*f*(3-2*f));}
+      if(motionKind(train,smooth)){
+        const m=train.transition;p=m.path;d=motionDistance(m);
       }
       const center=extendedSample(p,d),scale=requestedScale,cars=[];
       for(let i=0;i<T.CAR_COUNT;i++){
@@ -119,8 +155,8 @@
       }
       return {...center,scale,direction:1,d,cars,train};
     }
-    function interpolating(train){return !!(train.transition&&performance.now()-train.transition.start<train.transition.duration&&quality(train)==='fresh');}
-    function fail(message,state='error'){source.state=state;source.message=message;for(const t of fleet.trains)t.sourceError=true;}
+    function interpolating(train){return !!(motionKind(train)&&performance.now()-train.transition.start<train.transition.duration);}
+    function fail(message,state='error'){source.state=state;source.message=message;for(const t of fleet.trains){t.sourceError=true;t.transition=null;}}
 
     let hooks={},timer=null,busy=false,controller=null,generation=0,stopped=false;
     function wanted(){return hooks.getLineIds?.()||D.lines.map(l=>l.id);}
@@ -153,7 +189,7 @@
       $('live-poll-label').textContent=`${source.enabledLines.length} enabled ${source.enabledLines.length===1?'route':'routes'} · ${source.pollSeconds}s cache · station reports`;
       $('live-toggle').textContent=source.paused?'Resume updates':'Pause updates';$('live-toggle').setAttribute('aria-pressed',String(source.paused));
       $('live-toggle').disabled=['offline','unconfigured','checking'].includes(source.state);$('live-refresh').disabled=busy||source.state==='offline';
-      $('train-legend-text').textContent=source.paused?'Reports paused':counts.fresh?'3D trains · reported stations':counts.stale?'3D trains · stale reports':'No live trains connected';
+      $('train-legend-text').textContent=source.paused?'Reports paused':counts.fresh?(hooks.getMotionEnabled?.()===false?'3D trains · reported stations':'3D trains · station reports; motion estimated'):counts.stale?'3D trains · stale reports':'No live trains connected';
       $('live-notice').hidden=counts.fresh>0||counts.stale>0;
       $('live-notice-title').textContent=source.state==='unconfigured'?'Live feeds not configured':source.state==='offline'?'Live feed unavailable':source.state==='checking'?'Connecting to live data…':!active.length?'No enabled feed in this view':'No fresh train reports';
       $('live-notice-text').textContent=source.message||lineError?.message||'The network stays visible. No simulated trains are substituted for missing data.';
@@ -164,7 +200,7 @@
         el.textContent=status.label;el.dataset.quality=status.quality;
       });
       if($('live-dialog').open){
-        $('live-connection-summary').textContent=source.message||`${text}. ${counts.fresh} fresh mapped trains; ${counts.stale} stale.${lineError?' Some visible feeds failed; see the route details below.':''} Each displayed position is an observed station, not GPS.`;
+        $('live-connection-summary').textContent=source.message||`${text}. ${counts.fresh} fresh mapped trains; ${counts.stale} stale.${lineError?' Some visible feeds failed; see the route details below.':''} Reported stations are observations; any movement between or beyond them is a short visual estimate, not GPS.`;
         $('dialog-budget').textContent=$('live-budget').textContent+' · '+$('live-filter-note').textContent;
         const warning=typeof source.quotaWarning==='string'?source.quotaWarning:'';
         $('live-quota-warning').textContent=warning;$('live-quota-warning').hidden=!warning;
@@ -198,8 +234,8 @@
       const dialog=$('live-dialog');const open=()=>{dialog.showModal();ui();};
       for(const id of ['live-badge','live-settings','live-notice-connect'])$(id).onclick=open;
       $('close-live').onclick=()=>dialog.close();$('live-refresh').onclick=()=>refresh();
-      $('live-toggle').onclick=()=>{source.paused=!source.paused;generation++;controller?.abort();clearTimeout(timer);if(!source.paused)schedule(0);ui();};
-      document.addEventListener('visibilitychange',()=>{if(document.hidden){generation++;controller?.abort();clearTimeout(timer);}else schedule(0);});
+      $('live-toggle').onclick=()=>{source.paused=!source.paused;generation++;controller?.abort();clearTimeout(timer);if(source.paused)for(const t of fleet.trains)t.transition=null;else schedule(0);ui();};
+      document.addEventListener('visibilitychange',()=>{if(document.hidden){generation++;controller?.abort();clearTimeout(timer);for(const t of fleet.trains)t.transition=null;}else schedule(0);});
       window.addEventListener('pagehide',()=>{stopped=true;controller?.abort();clearTimeout(timer);});
       window.addEventListener('pageshow',e=>{if(e.persisted){stopped=false;schedule(0);}});
       setInterval(ui,1000);ui();
@@ -212,7 +248,7 @@
         if(s.configured)await refresh();
       }catch(e){fail(e.name==='AbortError'?'The live feed is not responding.':e.message,'offline');ui();}
     }
-    return{fleet,source,apply,pose,quality,age,interpolating,connect,refresh,selectionChanged,ui,resolve,fail,summary,statusName,directionName,clock};
+    return{fleet,source,apply,pose,quality,age,interpolating,motionKind,connect,refresh,selectionChanged,ui,resolve,fail,summary,statusName,directionName,clock};
   }
   window.SeoulLive={create,FRESH,EXPIRE,statusName,directionName,clock};
 })();

@@ -217,7 +217,7 @@ class FeedClient:
         env = env if env is not None else os.environ
         self.key = str(env.get('SEOUL_SUBWAY_API_KEY', '')).strip()
         self.configured = bool(self.key and self.key.lower() not in ('sample', 'paste_your_key_here', 'your_key_here'))
-        self.poll_seconds = max(15, min(3600, int(env.get('SEOUL_POLL_SECONDS', '120'))))
+        self.poll_seconds = max(3, min(3600, int(env.get('SEOUL_POLL_SECONDS', '120'))))
         self.scheme = str(env.get('SEOUL_API_SCHEME', 'http')).lower()
         if self.scheme not in ('http', 'https'):
             raise ValueError('SEOUL_API_SCHEME must be http or https.')

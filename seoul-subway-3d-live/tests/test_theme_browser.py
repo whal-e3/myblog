@@ -132,10 +132,10 @@ with sync_playwright() as p:
     for width in [390,320]:
         mobile=load(browser,theme='dark',mobile=True,width=width)
         assert not mobile.evaluate('document.documentElement.scrollWidth>innerWidth')
-        buttons=[mobile.locator('#'+i).bounding_box() for i in ['live-badge','theme-toggle','export']]
+        assert mobile.locator('#live-badge').is_hidden()
+        buttons=[mobile.locator('#'+i).bounding_box() for i in ['theme-toggle','export']]
         assert all(b and b['x']>=0 and b['x']+b['width']<=width for b in buttons)
         assert buttons[0]['x']+buttons[0]['width']<=buttons[1]['x']+1
-        assert buttons[1]['x']+buttons[1]['width']<=buttons[2]['x']+1
         mobile.locator('#theme-toggle').tap();assert mobile.evaluate('SeoulTheme.current')=='light'
         mobile.locator('#theme-toggle').tap();assert mobile.evaluate('SeoulTheme.current')=='dark'
         if width==390:
