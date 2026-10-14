@@ -63,6 +63,27 @@ with sync_playwright() as p:
  after=page.evaluate('__SEOUL_APP__.project(0,0,0)')
  assert after['x']>before['x']+20,(before,after)
  record('canvas-arrow-key-pan',{'leftPixels':after['x']-before['x']})
+ # Modified wheel input pans in screen directions without zooming or turning the map.
+ for name,flags,delta_x,delta_y,mode,axis,sign in [
+  ('ctrl-wheel-down',{'ctrlKey':True},0,120,0,'y',-1),
+  ('ctrl-wheel-up',{'ctrlKey':True},0,-120,0,'y',1),
+  ('shift-wheel-down',{'shiftKey':True},0,120,0,'x',-1),
+  ('shift-delta-x',{'shiftKey':True},120,0,0,'x',-1),
+  ('ctrl-shift-precedence',{'ctrlKey':True,'shiftKey':True},0,120,0,'y',-1),
+  ('ctrl-line-mode',{'ctrlKey':True},0,3,1,'y',-1),
+ ]:
+  page.evaluate('()=>{const a=__SEOUL_APP__;a.releaseZoomAnchor();a.core();a.goal.yaw=.65;Object.assign(a.cam,a.goal);a.render();}')
+  before=page.evaluate('({p:__SEOUL_APP__.project(0,0,0),scale:__SEOUL_APP__.goal.scale,yaw:__SEOUL_APP__.goal.yaw,pitch:__SEOUL_APP__.goal.pitch})')
+  prevented=page.evaluate('''input=>{
+   const event=new WheelEvent('wheel',{cancelable:true,deltaX:input.deltaX,deltaY:input.deltaY,deltaMode:input.mode,...input.flags});
+   document.querySelector('#scene').dispatchEvent(event);return event.defaultPrevented;
+  }''',{'deltaX':delta_x,'deltaY':delta_y,'mode':mode,'flags':flags})
+  page.wait_for_timeout(120)
+  after=page.evaluate('({p:__SEOUL_APP__.project(0,0,0),scale:__SEOUL_APP__.goal.scale,yaw:__SEOUL_APP__.goal.yaw,pitch:__SEOUL_APP__.goal.pitch})')
+  travel=(after['p'][axis]-before['p'][axis])*sign
+  assert prevented and travel>20,(name,before,after,prevented)
+  assert after['scale']==before['scale'] and after['yaw']==before['yaw'] and after['pitch']==before['pitch'],(name,before,after)
+  record(name,{'pixels':round(travel,1),'zoomUnchanged':True})
  # Right and shift-drag rotation remains available, not primary.
  for shift in [False,True]:
   page.evaluate("()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}")

@@ -107,7 +107,8 @@ per-client limits, and a shared server-side feed cache.
   **Right-drag or Shift-drag:** rotate the view.
   The separate **Rotate** arrows also turn it.
 - **Mouse wheel:** zoom around the point under the cursor; it stays pinned during easing.
-  Two fingers pan and pinch around their midpoint. Manual gestures stop camera-follow
+  **Ctrl + wheel** pans vertically; **Shift + wheel** pans horizontally. On touch screens,
+  two fingers pan and pinch around their midpoint. Manual gestures stop camera-follow
   and auto-orbit, but do not stop real data updates.
 - Click a train, or press **T**, to inspect its four-car mesh and reported station,
   destination, train number, direction, status, and source timestamp. The model preview

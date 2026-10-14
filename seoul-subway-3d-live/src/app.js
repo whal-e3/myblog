@@ -611,11 +611,21 @@
     canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);canvas.addEventListener('pointerleave',()=>{if(!moving){$('hover-tip').hidden=true;hover=null;}});
     canvas.addEventListener('wheel',e=>{
       e.preventDefault();
-      // WheelEvent.deltaMode: 0=pixels, 1=lines, 2=pages; trackpad pinch may set ctrlKey.
+      // WheelEvent.deltaMode: 0=pixels, 1=lines, 2=pages.
       const mode=e.deltaMode,amount=e.deltaY*(mode===1?16:mode===2?height:1);
+      if(e.ctrlKey){
+        if(Number.isFinite(amount)&&amount!==0)pan(0,-clamp(amount,-240,240)*.8,false);
+        return;
+      }
+      if(e.shiftKey){
+        // Browsers may translate Shift+wheel into deltaX themselves.
+        const horizontal=(e.deltaX||e.deltaY)*(mode===1?16:mode===2?width:1);
+        if(Number.isFinite(horizontal)&&horizontal!==0)pan(-clamp(horizontal,-240,240)*.8,0,false);
+        return;
+      }
       if(!Number.isFinite(amount)||amount===0)return;
-      const r=canvas.getBoundingClientRect(),gain=e.ctrlKey?.006:.0015;
-      zoomAt(Math.exp(clamp(amount*gain,-.6,.6)),e.clientX-r.left,e.clientY-r.top);
+      const r=canvas.getBoundingClientRect();
+      zoomAt(Math.exp(clamp(amount*.0015,-.6,.6)),e.clientX-r.left,e.clientY-r.top);
     },{passive:false});
     // Toolbar and keyboard zoom deliberately use the center of the map viewport.
     function zoom(factor){zoomAt(factor);}
