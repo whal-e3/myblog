@@ -220,7 +220,7 @@ test('SQLite quota persists, stops at 900, and resets at KST midnight', () => {
   db.close();
 });
 
-test('provider quota error is latched until the next KST day', async () => {
+test('undocumented provider code pauses calls until the next local KST day', async () => {
   const { db, store } = sqlite();
   let now = clockStart;
   let calls = 0;
@@ -231,10 +231,14 @@ test('provider quota error is latched until the next KST day', async () => {
   const engine = new Line2Engine(store, key, fetcher, () => now);
   const first = await engine.positions();
   assert.equal(first.lines[0].code, 'ERROR-337');
+  assert.match(first.lines[0].message, /meaning for this feed is unconfirmed/);
+  assert.match(first.lines[0].message, /paused through this local KST day/);
+  assert.doesNotMatch(first.lines[0].message, /quota/i);
   assert.equal(first.budget.used, 1);
   now += 61_000;
   const second = await engine.positions();
   assert.equal(second.lines[0].code, 'ERROR-337');
+  assert.match(second.lines[0].message, /paused through this local KST day/);
   assert.equal(calls, 1);
   assert.equal(second.budget.used, 1);
   now = Date.parse('2026-10-13T15:01:00Z');
@@ -245,7 +249,7 @@ test('provider quota error is latched until the next KST day', async () => {
   db.close();
 });
 
-test('provider quota block applies to every enabled route in the shared object', async () => {
+test('undocumented provider code pauses every enabled route in the shared object', async () => {
   const { db, store } = sqlite();
   let now = clockStart;
   const names = [];
@@ -295,7 +299,7 @@ test('rejected API key stops later routes on the same object', async () => {
   db.close();
 });
 
-test('a provider quota signal on another route stops an in-flight snapshot before its next page', async () => {
+test('an undocumented provider code on another route stops an in-flight snapshot before its next page', async () => {
   const { db, store } = sqlite();
   const reports = Array.from({ length: 1000 }, (_, index) => rowFor('1', String(index)));
   let enterFirst;

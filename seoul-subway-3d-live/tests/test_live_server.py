@@ -113,7 +113,7 @@ class AdapterTests(unittest.TestCase):
   self.assertEqual(c.budget.snapshot()['used'],3)
   c.positions(['1','2','GTX-A'])
   self.assertEqual(len(calls),3)
- def test_provider_quota_latches_across_lines_until_kst_day_changes(self):
+ def test_undocumented_provider_code_pauses_lines_until_local_kst_day_changes(self):
   for code in ('ERROR-337','ERROR-338'):
    with self.subTest(code=code):
     calls=[]
@@ -128,6 +128,9 @@ class AdapterTests(unittest.TestCase):
     repeated=c.line('1')
     self.assertEqual([first['code'],second['code'],repeated['code']],[code]*3)
     self.assertEqual([first['state'],second['state'],repeated['state']],['error']*3)
+    self.assertIn('meaning for this feed is unconfirmed',first['message'])
+    self.assertIn('paused through this local KST day',second['message'])
+    self.assertNotIn('quota',first['message'].lower())
     self.assertEqual(len(calls),1)
     self.assertEqual(c.budget.snapshot()['used'],starting_calls+1)
     self.assertNotIn('secret-key-url',json.dumps([first,second,repeated]))
@@ -136,7 +139,7 @@ class AdapterTests(unittest.TestCase):
     c.transport=lambda url:payload([row(subwayId=FEEDS['2'][1])])
     self.assertEqual(c.line('2')['state'],'ok')
     self.assertEqual(c.budget.snapshot()['used'],starting_calls+2)
- def test_provider_quota_interrupts_another_lines_pagination(self):
+ def test_undocumented_provider_code_interrupts_another_lines_pagination(self):
   page_started=threading.Event();release_page=threading.Event();calls=[]
   def provider(url):
    name=unquote(url.rsplit('/',1)[1]);calls.append(name)

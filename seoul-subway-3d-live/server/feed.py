@@ -36,7 +36,9 @@ FEEDS = {
 }
 DOCUMENTATION = 'https://data.seoul.go.kr/dataList/OA-12601/A/1/datasetView.do'
 PAGE_SIZE = 1000
-PROVIDER_QUOTA_CODES = frozenset(('ERROR-337', 'ERROR-338'))
+# The realtimePosition specification does not define these codes. Pause on
+# either one as a precaution; do not claim that Seoul identified a quota error.
+PROVIDER_PAUSE_CODES = frozenset(('ERROR-337', 'ERROR-338'))
 
 
 def iso(dt: datetime | None) -> str | None:
@@ -113,8 +115,8 @@ def parse_payload(raw: bytes) -> tuple[list[dict], int]:
             'INFO-100': 'The API key was rejected. Check that it is approved for the realtime subway service.',
             'ERROR-300': 'The provider rejected the request parameters.',
             'ERROR-331': 'The provider rejected the pagination range.',
-            'ERROR-337': 'The upstream daily API quota has been reached.',
-            'ERROR-338': 'The upstream daily API quota has been reached.',
+            'ERROR-337': 'The provider returned ERROR-337; its meaning for this feed is unconfirmed.',
+            'ERROR-338': 'The provider returned ERROR-338; its meaning for this feed is unconfirmed.',
         }
         raise FeedError(safe_code, messages.get(safe_code, f'The upstream service returned {safe_code}. Check the official API documentation.'))
     rows = payload.get('realtimePositionList')
@@ -283,7 +285,8 @@ class FeedClient:
                         if self.auth_error:
                             raise FeedError('INFO-100', 'The API key was rejected. Correct .env and restart the server.')
                         if self.provider_quota_day == datetime.now(KST).strftime('%Y-%m-%d'):
-                            raise FeedError(self.provider_quota_code or 'ERROR-337', 'The provider quota is exhausted for today.')
+                            code = self.provider_quota_code or 'ERROR-337'
+                            raise FeedError(code, f'The provider returned {code}; its meaning for this feed is unconfirmed.')
                     self.budget.reserve()
                     url = f'{self.scheme}://swopenapi.seoul.go.kr/api/subway/{quote(self.key, safe="")}/json/realtimePosition/{start}/{start+PAGE_SIZE}/{name}'
                     page, reported_total = parse_payload(self.transport(url))
@@ -321,9 +324,11 @@ class FeedClient:
                 with self.auth_lock:
                     if error.code == 'INFO-100':
                         self.auth_error = True
-                    if error.code in PROVIDER_QUOTA_CODES:
+                    if error.code in PROVIDER_PAUSE_CODES:
                         self.provider_quota_day = datetime.now(KST).strftime('%Y-%m-%d')
                         self.provider_quota_code = error.code
+                if error.code in PROVIDER_PAUSE_CODES:
+                    error.message += ' Further calls are paused through this local KST day as a precaution.'
                 item = {'lineId': line_id, 'state': 'error', 'code': error.code, 'message': error.message,
                         'trains': (old or {}).get('trains', []), 'fetchedAt': (old or {}).get('fetchedAt'),
                         'lastAttemptAt': iso(fetched)}

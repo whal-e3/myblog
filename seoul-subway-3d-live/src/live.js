@@ -10,10 +10,15 @@
   const $=id=>document.getElementById(id);
   const clean=s=>String(s||'').normalize('NFKC').replace(/\([^)]*\)/g,'').replace(/[\s·.\-_]/g,'').toLowerCase();
   const aliases={'서울역':'서울','응암순환':'응암','대모산':'대모산입구','총신대입구이수':'총신대입구','성신여대':'성신여대입구','숙대입구':'숙대입구','화전':'한국항공대','뚝섬유원지':'자양','지제':'평택지제'};
-  // Provider-observed route/station pairs absent or ambiguous in this snapshot.
-  // Use only verified existing station points; never infer a cross-line match.
+  // Exact provider-observed route/station pairs missing or ambiguous in this atlas.
+  // Some fallbacks use a shared station's coordinates where route-specific geometry is absent.
   const stationFallbacks={
-    'GTX-A':{'성남':619},'공항철도':{'디지털미디어시티':250},'경춘':{'용산':49},'W':{'삼양':433}
+    '2':{'신도림지선':70},
+    '7':{'총신대입구':601},
+    'GTX-A':{'성남':619},
+    '공항철도':{'디지털미디어시티':250,'홍대입구':455},
+    '경춘':{'용산':49},
+    'W':{'삼양':433,'보문':229}
   };
   const normalized=s=>aliases[clean(s)]||clean(s);
   const statusName=s=>({'0':'Approaching','1':'At station','2':'Departed','3':'Operating'}[String(s)]||'Status not specified');

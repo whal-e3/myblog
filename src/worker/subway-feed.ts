@@ -185,7 +185,7 @@ export class SubwayFeedEngine {
         }
         const providerCode = this.store.providerBlock(this.clock());
         if (providerCode) {
-          throw new FeedError(providerCode, "The provider's daily API quota has been reached.");
+          throw new FeedError(providerCode, `The provider returned ${providerCode}; its meaning for this feed is unconfirmed.`);
         }
         // Persist one reservation before each upstream call, including retries.
         this.store.reserve(this.clock());
@@ -222,6 +222,7 @@ export class SubwayFeedEngine {
       if (safe.code === "INFO-100") this.authBlocked = true;
       if (safe.code === "ERROR-337" || safe.code === "ERROR-338") {
         this.store.blockProvider(this.clock(), safe.code);
+        safe.message += " Further calls are paused through this local KST day as a precaution.";
       }
       line = {
         lineId, state: "error", code: safe.code, message: safe.message,

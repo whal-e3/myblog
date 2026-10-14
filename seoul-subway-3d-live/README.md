@@ -167,15 +167,17 @@ segments**, snapshot **2026-08-24**. Connecting a key does not update that geome
 New stations absent from this snapshot will appear in unmatched-record diagnostics,
 not at invented map positions. See `LICENSE-DATA.md` for provenance and transformations.
 
-The adapter has candidate query mappings for Lines 1–9, AREX, Gyeongui–Jungang,
-Gyeongchun, Suin–Bundang, Shinbundang, Gyeonggang, Seohae, Ui–Sinseol, Sillim and GTX-A.
-The provider's public sample returned rows for all 19 queries on 2026-10-14, but it only
-returned up to five rows per query. **That does not establish complete or fresh coverage
-with an approved key.** Availability is determined by the provider's actual response.
-Incheon Lines 1/2,
-Gimpo Goldline, Everline and Uijeongbu have no live adapter in this release and remain
-**MAP ONLY**. The five-record Line 2 diagnostic does not establish full-line coverage
-or availability for other routes.
+The adapter has query mappings for Lines 1–9, AREX, Gyeongui–Jungang, Gyeongchun,
+Suin–Bundang, Shinbundang, Gyeonggang, Seohae, Ui–Sinseol, Sillim and GTX-A. On
+2026-10-14, the approved key returned HTTP 200 / INFO-000 for a full provider-reported
+snapshot of each of these 19 routes: 457 raw reports in total, all within one page per
+route. That establishes what the provider reported at the test time, **not** that every
+operating train was present or that every feed will remain available. Four additional
+route/station name pairs needed exact atlas coordinate fallbacks; AREX Hongdae and
+Ui–Sinseol Bomun have no route-specific station geometry in this atlas, so their
+coordinates come from the same physical station on another mapped line. Incheon Lines
+1/2, Gimpo Goldline, Everline and Uijeongbu have no confirmed reusable live adapter in
+this release and remain **MAP ONLY**.
 
 ## Polling and request budget
 
@@ -201,15 +203,18 @@ will exhaust it; it does not make all 24 mapped routes live. The Seoul Open Data
 after registering a working service in its gallery; its FAQ says a local URL is not
 eligible for review. This step belongs to the later publication session. Do not raise `SEOUL_DAILY_LIMIT`
 beyond the quota actually approved for your key. Reports older than 90 seconds are
-marked stale even during a healthy 120-second polling interval. The counter resets at
-midnight in Seoul.
+marked stale even during a healthy 120-second polling interval. The **local** counter
+resets at midnight in Seoul; the provider's reset time has not been verified.
 
 The local server shares a per-line cache, locks and a three-worker request pool across
 tabs. Hidden lines and hidden browser tabs do not start further polls; requests already
 in progress can finish. Error retries back off to at least 60 seconds. Invalid-key
-responses latch until restart; provider daily-quota responses latch until the next
-Korean calendar day. The local request counter is persisted in `.runtime/api-usage.json`;
-restarting does not reset it. Keep one server instance per project/runtime directory.
+responses latch until restart. The realtimePosition specification does not define
+`ERROR-337` or `ERROR-338`; after either code, this connector pauses calls through the
+current local KST day as a precaution, without claiming the provider's cause or reset
+time. The local request counter is persisted in `.runtime/api-usage.json`; restarting
+does not reset it. Usage by other clients of the same key is not included. Keep one
+server instance per project/runtime directory.
 
 ## Troubleshooting
 

@@ -124,8 +124,8 @@ function providerError(code: string): FeedError {
     "INFO-100": "The API key was rejected. Check approval for the realtime subway service.",
     "ERROR-300": "The provider rejected the request parameters.",
     "ERROR-331": "The provider rejected the pagination range.",
-    "ERROR-337": "The provider's daily API quota has been reached.",
-    "ERROR-338": "The provider's daily API quota has been reached.",
+    "ERROR-337": "The provider returned ERROR-337; its meaning for this feed is unconfirmed.",
+    "ERROR-338": "The provider returned ERROR-338; its meaning for this feed is unconfirmed.",
   };
   return new FeedError(safeCode, messages[safeCode] ?? `The upstream service returned ${safeCode}.`);
 }

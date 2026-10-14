@@ -40,11 +40,16 @@ check('One route failure does not mark another route stale',()=>{
 });
 check('Explicit provider-observed station fallbacks use existing points',()=>{
  for(const [lineId,name,stationId] of [
+  ['2','신도림지선',70],['7','총신대입구(이수)',601],
+  ['공항철도','홍대입구',455],['W','보문',229],
   ['GTX-A','성남',619],['공항철도','디지털미디어시티',250],['경춘','용산',49],['W','삼양',433],
  ]){
   const line=D.lines.findIndex(l=>l.id===lineId);
   assert.equal(live.resolve(line,name)?.id,stationId,`${lineId} ${name}`);
   assert.equal(live.resolve(line,'UNVERIFIED STATION'),null);
  }
+ const seven=D.lines.findIndex(l=>l.id==='7'),four=D.lines.findIndex(l=>l.id==='4');
+ assert.equal(live.resolve(four,'총신대입구(이수)')?.id,652,'Line 4 keeps its own station point');
+ assert.equal(live.resolve(seven,'신도림지선'),null,'fallbacks do not leak across routes');
 });
 console.log(`${tests} client-model cases passed; synthetic fixtures only.`);
