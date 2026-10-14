@@ -9,7 +9,7 @@ tags:
 comments: false
 ---
 
-I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. You can explore 24 mapped lines and 659 stations in 3D, search for stations, and switch between network views. A Korea locator shows where this Seoul-area network sits on the peninsula.
+I've been building **Seoul Subsurface**, a small interactive map of the Seoul metropolitan subway. It opens from above and eases into a 3D view of 24 mapped lines and 659 stations. You can search for stations, rotate the map, and use a Korea locator to see where this Seoul-area network sits on the peninsula.
 
 Line 2 can also show live train reports from Seoul's official `realtimePosition` API. Each report names a station and a report time; it is **not GPS tracking or an arrival prediction**. The rest of the network remains explorable even when the live feed is unavailable.
 

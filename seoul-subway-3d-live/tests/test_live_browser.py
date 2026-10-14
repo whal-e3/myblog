@@ -24,6 +24,7 @@ def fixture(url):
 def station_row(name='강남',number='TEST-2001',seconds=-10):
  return {'key':'2:TEST:'+number,'lineId':'2','number':number,'stationName':name,'observedAt':iso(seconds),'receivedAt':iso(),'direction':'0','status':'1','destination':'성수','express':False,'lastTrain':False}
 def load(browser,**kw):
+ kw.setdefault('reduced_motion','reduce')
  page=browser.new_page(**kw);page.on('pageerror',lambda e:results['errors'].append(str(e)))
  page.expose_function('__fixtureFetch',fixture)
  page.evaluate('()=>{window.fetch=async url=>new Response(await window.__fixtureFetch(url),{status:200,headers:{"Content-Type":"application/json"}});}')
@@ -35,20 +36,19 @@ with sync_playwright() as p:
  assert page.locator('#live-badge-label').inner_text()=='FEED NOT CONFIGURED'
  record('no-key-no-synthetic-trains',{'trains':0,'apiCalls':len(calls)})
  page.click('#scope-core');page.wait_for_timeout(1000)
- # Real mouse gestures; the projected world anchor must follow the exact screen delta.
- for mode in ['3d','top','layers']:
-  page.evaluate('(m)=>{const a=__SEOUL_APP__;a.core();a.setMode(m);Object.assign(a.cam,a.goal);a.render();}',mode)
-  r=page.locator('#scene').bounding_box();x=r['x']+r['width']*.45;y=r['y']+r['height']*.5
-  before=page.evaluate('({yaw:__SEOUL_APP__.cam.yaw,pitch:__SEOUL_APP__.cam.pitch,p:__SEOUL_APP__.project(0,0,0)})')
-  page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+82,y+46,steps=1);page.mouse.up();page.wait_for_timeout(80)
-  after=page.evaluate('({yaw:__SEOUL_APP__.cam.yaw,pitch:__SEOUL_APP__.cam.pitch,p:__SEOUL_APP__.project(0,0,0)})')
-  dx=after['p']['x']-before['p']['x'];dy=after['p']['y']-before['p']['y']
-  assert abs(dx-82)<.15 and abs(dy-46)<.15,(mode,dx,dy)
-  assert after['yaw']==before['yaw'] and after['pitch']==before['pitch']
-  record('left-drag-pan-'+mode,{'deltaX':dx,'deltaY':dy,'rotationUnchanged':True})
+ # Real mouse gesture; the projected world anchor must follow the exact screen delta.
+ page.evaluate('()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}')
+ r=page.locator('#scene').bounding_box();x=r['x']+r['width']*.45;y=r['y']+r['height']*.5
+ before=page.evaluate('({yaw:__SEOUL_APP__.cam.yaw,pitch:__SEOUL_APP__.cam.pitch,p:__SEOUL_APP__.project(0,0,0)})')
+ page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+82,y+46,steps=1);page.mouse.up();page.wait_for_timeout(80)
+ after=page.evaluate('({yaw:__SEOUL_APP__.cam.yaw,pitch:__SEOUL_APP__.cam.pitch,p:__SEOUL_APP__.project(0,0,0)})')
+ dx=after['p']['x']-before['p']['x'];dy=after['p']['y']-before['p']['y']
+ assert abs(dx-82)<.15 and abs(dy-46)<.15,(dx,dy)
+ assert after['yaw']==before['yaw'] and after['pitch']==before['pitch']
+ record('left-drag-pan',{'deltaX':dx,'deltaY':dy,'rotationUnchanged':True})
  # Right and shift-drag rotation remains available, not primary.
  for shift in [False,True]:
-  page.evaluate("()=>{const a=__SEOUL_APP__;a.core();a.setMode('3d');Object.assign(a.cam,a.goal);a.render();}")
+  page.evaluate("()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}")
   before=page.evaluate('__SEOUL_APP__.goal.yaw');page.mouse.move(x,y)
   if shift:page.keyboard.down('Shift')
   page.mouse.down(button='left' if shift else 'right');page.mouse.move(x+55,y+12,steps=1);page.mouse.up(button='left' if shift else 'right')
@@ -56,16 +56,15 @@ with sync_playwright() as p:
   assert abs(page.evaluate('__SEOUL_APP__.goal.yaw')-before)>.1
  record('secondary-rotation',{'rightDrag':True,'shiftDrag':True})
  # Reuse a station-aware anchor with the elevated line's actual render height.
- zoomtest='''async ({mode,delta})=>{
- const a=__SEOUL_APP__,c=document.querySelector('#scene'),r=c.getBoundingClientRect();a.releaseZoomAnchor();a.core();a.setMode(mode);a.state.selectedLine=1;Object.assign(a.cam,a.goal);a.render();
+ zoomtest='''async delta=>{
+ const a=__SEOUL_APP__,c=document.querySelector('#scene'),r=c.getBoundingClientRect();a.releaseZoomAnchor();a.core();a.state.selectedLine=1;Object.assign(a.cam,a.goal);a.render();
  const p=a.getProjected().filter(p=>p.alpha>.5&&p.x>r.width*.16&&p.x<r.width*.76&&p.y>r.height*.22&&p.y<r.height*.68)[0];
  const y=.32+p.line*.78*a.cam.spread,pos=a.project(p.s.x,y,p.s.z),e=new WheelEvent('wheel',{clientX:r.left+pos.x,clientY:r.top+pos.y,deltaY:delta,cancelable:true});
  const x=e.clientX-r.left,sy=e.clientY-r.top,w=a.pointUnderCursor(x,sy,a.cam,y);c.dispatchEvent(e);let drift=0;
- for(let n=0;n<4;n++){await Promise.race([new Promise(requestAnimationFrame),new Promise(r=>setTimeout(r,500))]);const q=a.project(w.x,w.y,w.z);drift=Math.max(drift,Math.hypot(q.x-x,q.y-sy));}return {mode,delta,drift};}'''
- for mode in ['3d','top','layers']:
-  for delta in [-190,190]:
-   print('starting zoom',mode,delta,round(time.monotonic()-started,1),flush=True)
-   rr=page.evaluate(zoomtest,{'mode':mode,'delta':delta});assert rr['drift']<.1,rr;record('cursor-centered-zoom',rr)
+ for(let n=0;n<4;n++){await Promise.race([new Promise(requestAnimationFrame),new Promise(r=>setTimeout(r,500))]);const q=a.project(w.x,w.y,w.z);drift=Math.max(drift,Math.hypot(q.x-x,q.y-sy));}return {delta,drift};}'''
+ for delta in [-190,190]:
+  print('starting zoom',delta,round(time.monotonic()-started,1),flush=True)
+  rr=page.evaluate(zoomtest,delta);assert rr['drift']<.1,rr;record('cursor-centered-zoom',rr)
  # UI -> client fetch -> normalized fixture -> real scene/inspector.
  feed['lines']=[{'lineId':'2','state':'ok','trains':[station_row()]}]
  page.evaluate('async()=>{await __SEOUL_APP__.live.refresh();__SEOUL_APP__.live.ui();}')
@@ -106,7 +105,7 @@ with sync_playwright() as p:
  assert colors['allMatch'] and colors['panel']=='rgb(255, 255, 255)';record('metro-palette',colors)
  # Mobile touch pan and pinch. Dispatch browser touch events via CDP.
  mobile=load(b,viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
- mobile.evaluate("()=>{const a=__SEOUL_APP__;a.core();a.setMode('3d');Object.assign(a.cam,a.goal);a.render();}")
+ mobile.evaluate("()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}")
  cdp=mobile.context.new_cdp_session(mobile)
  before=mobile.evaluate('({p:__SEOUL_APP__.project(0,0,0),yaw:__SEOUL_APP__.cam.yaw})')
  cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':160,'y':420,'id':1}]})

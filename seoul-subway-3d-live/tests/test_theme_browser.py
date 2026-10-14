@@ -23,9 +23,11 @@ report = {'browserNavigation':'set_content (URL navigation blocked by environmen
 def record(name, **detail):
     report['cases'].append({'case':name, **detail}); print('PASS',name,flush=True)
 
-def load(browser, theme='light', saved=None, storage=True, mobile=False, width=1440):
+def load(browser, theme='light', saved=None, storage=True, mobile=False, width=1440,
+         reduced_motion=True):
     page = browser.new_page(viewport={'width':width,'height':844 if mobile else 950},
-                            color_scheme=theme, reduced_motion='reduce',
+                            color_scheme=theme,
+                            reduced_motion='reduce' if reduced_motion else 'no-preference',
                             is_mobile=mobile,has_touch=mobile)
     page.on('pageerror',lambda e:report['pageErrors'].append(str(e)))
     if storage:
@@ -52,6 +54,8 @@ with sync_playwright() as p:
     assert page.evaluate('SeoulTheme.preference')=='system'
     assert page.locator('#theme-toggle').get_attribute('aria-label')=='Switch to light mode'
     record('initial-system-theme',renderer=page.evaluate('__SEOUL_APP__.renderer'))
+    assert abs(page.evaluate('__SEOUL_APP__.cam.pitch')-.72)<.01
+    record('reduced-motion-starts-at-final-3d-angle')
     page.emulate_media(color_scheme='light')
     page.wait_for_function('SeoulTheme.current==="light"')
     record('follows-device-changes-until-manual-selection')
@@ -68,26 +72,25 @@ with sync_playwright() as p:
     reloaded.close()
 
     # Theme changes cannot alter geography, selections, camera targets, or source colors.
-    for mode in ['3d','top','layers']:
-        page.evaluate('''mode=>{const a=__SEOUL_APP__;a.releaseZoomAnchor();a.core();a.setMode(mode);Object.assign(a.cam,a.goal);a.render()}''',mode)
-        page.wait_for_timeout(60)
-        snapshot='JSON.stringify({cam:__SEOUL_APP__.cam,goal:__SEOUL_APP__.goal,state:__SEOUL_APP__.state,colors:SEOUL_DATA.lines.map(l=>l.color)})'
-        before=page.evaluate(snapshot)
-        for theme in ['light','dark']:
-            page.evaluate('(t)=>SeoulTheme.set(t)',theme)
-            assert page.evaluate(snapshot)==before
-            pixels=page.evaluate('''()=>{
-              const c=document.querySelector('#scene'),a=__SEOUL_APP__;
-              if(a.renderer==='webgl')return {kind:'webgl',color:[...c.getContext('webgl').getParameter(c.getContext('webgl').COLOR_CLEAR_VALUE)]};
-              const pixels=c.getContext('2d').getImageData(c.width-24,c.height-24,24,24).data,counts=new Map();
-              for(let i=0;i<pixels.length;i+=4){const k=[pixels[i],pixels[i+1],pixels[i+2]].join(',');counts.set(k,(counts.get(k)||0)+1)}
-              return {kind:'canvas',color:[...counts].sort((a,b)=>b[1]-a[1])[0][0].split(',').map(Number)};
-            }''')
-            expected=[8,23,38] if theme=='dark' else [243,247,252]
-            actual=[round(v*255) for v in pixels['color'][:3]] if pixels['kind']=='webgl' else pixels['color'][:3]
-            assert actual==expected,(theme,actual,expected)
-        record('map-palette-and-view-preserved-'+mode)
-    page.evaluate('()=>{const a=__SEOUL_APP__;a.core();a.setMode("3d");Object.assign(a.cam,a.goal);a.render()}')
+    page.evaluate('''()=>{const a=__SEOUL_APP__;a.releaseZoomAnchor();a.core();Object.assign(a.cam,a.goal);a.render()}''')
+    page.wait_for_timeout(60)
+    snapshot='JSON.stringify({cam:__SEOUL_APP__.cam,goal:__SEOUL_APP__.goal,state:__SEOUL_APP__.state,colors:SEOUL_DATA.lines.map(l=>l.color)})'
+    before=page.evaluate(snapshot)
+    for theme in ['light','dark']:
+        page.evaluate('(t)=>SeoulTheme.set(t)',theme)
+        assert page.evaluate(snapshot)==before
+        pixels=page.evaluate('''()=>{
+          const c=document.querySelector('#scene'),a=__SEOUL_APP__;
+          if(a.renderer==='webgl')return {kind:'webgl',color:[...c.getContext('webgl').getParameter(c.getContext('webgl').COLOR_CLEAR_VALUE)]};
+          const pixels=c.getContext('2d').getImageData(c.width-24,c.height-24,24,24).data,counts=new Map();
+          for(let i=0;i<pixels.length;i+=4){const k=[pixels[i],pixels[i+1],pixels[i+2]].join(',');counts.set(k,(counts.get(k)||0)+1)}
+          return {kind:'canvas',color:[...counts].sort((a,b)=>b[1]-a[1])[0][0].split(',').map(Number)};
+        }''')
+        expected=[8,23,38] if theme=='dark' else [243,247,252]
+        actual=[round(v*255) for v in pixels['color'][:3]] if pixels['kind']=='webgl' else pixels['color'][:3]
+        assert actual==expected,(theme,actual,expected)
+    record('map-palette-and-camera-preserved')
+    page.evaluate('()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render()}')
     page.screenshot(path=str(out/'dark-desktop.png'))
 
     # Selection and actual model instances survive a theme switch; data is test-only.
@@ -145,7 +148,21 @@ with sync_playwright() as p:
     blocked=load(browser,theme='dark',storage=False)
     blocked.click('#theme-toggle');assert blocked.evaluate('SeoulTheme.current')=='light'
     record('opaque-origin-storage-unavailable-still-works')
-    blocked.close();browser.close()
+    blocked.close()
+
+    animated=load(browser,reduced_motion=False)
+    assert animated.locator('#mode-layers').count()==0
+    assert animated.evaluate('__SEOUL_APP__.cam.pitch')>1.35
+    animated.wait_for_function('Math.abs(__SEOUL_APP__.cam.pitch-.72)<.02',timeout=6500)
+    record('single-view-intro-tilts-from-overhead-to-3d')
+    animated.close()
+    interrupted=load(browser,reduced_motion=False)
+    interrupted.click('#rotate-right')
+    yaw=interrupted.evaluate('__SEOUL_APP__.goal.yaw')
+    interrupted.wait_for_timeout(3600)
+    assert abs(interrupted.evaluate('__SEOUL_APP__.goal.yaw')-yaw)<1e-6
+    record('manual-rotation-interrupts-intro')
+    interrupted.close();browser.close()
 assert not report['pageErrors'],report['pageErrors']
 (out/'theme-browser-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 print(f"{len(report['cases'])} theme cases passed; no page errors.")

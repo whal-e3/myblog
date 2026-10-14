@@ -99,17 +99,20 @@ per-client limits, and a shared server-side feed cache.
 
 ## Navigation and visual design
 
+- The map opens from above and slowly tilts into a 3D view. Moving the map interrupts
+  this introduction. Reduced-motion settings skip the animation.
 - **Left-drag / one-finger drag:** pan in the direction of your drag. The map's angle does
-  not change. **Right-drag or Shift-drag:** rotate in 3D / exploded view. Top-down stays a
-  top-down map.
+  not change. **Right-drag or Shift-drag:** rotate the view. The on-map arrow buttons
+  also rotate it.
 - **Mouse wheel:** zoom around the point under the cursor; it stays pinned during easing.
   Two fingers pan and pinch around their midpoint. Manual gestures stop camera-follow
   and auto-orbit, but do not stop real data updates.
 - Click a train, or press **T**, to inspect its four-car mesh and reported station,
   destination, train number, direction, status, and source timestamp. The model preview
   itself rotates on drag. **Follow train** follows new reports, not a simulated path.
-- **3D / Top-down / Exploded** views, line visibility and isolation, Korean/English station
-  search, overview map, image export, geometry export, and keyboard controls are retained.
+- The single 3D view includes line visibility and isolation, Korean/English station
+  search, the Korea locator and network overview, image export, geometry export,
+  and keyboard controls.
   **Space** toggles brief visual smoothing, not the feed or real-world trains. Use
   **Pause updates** for the actual polling control.
 
@@ -219,7 +222,7 @@ to bypass provider limits.
 ## Single-file preview versus source project
 
 `dist/seoul-subway-3d-live.html` bundles the full visual atlas. It can be opened locally to
-inspect the new theme, search, 3D views and navigation. **A single offline HTML file cannot
+inspect the new theme, search, 3D view and navigation. **A single offline HTML file cannot
 obtain live reports on its own.** It intentionally shows SERVER REQUIRED and no synthetic
 trains. For live tracking, run the source project's server as described above.
 
