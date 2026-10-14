@@ -46,6 +46,23 @@ with sync_playwright() as p:
  assert abs(dx-82)<.15 and abs(dy-46)<.15,(dx,dy)
  assert after['yaw']==before['yaw'] and after['pitch']==before['pitch']
  record('left-drag-pan',{'deltaX':dx,'deltaY':dy,'rotationUnchanged':True})
+ # The visible direction pad moves the camera in screen directions, even after rotation.
+ for yaw in [0,.65]:
+  page.evaluate('(yaw)=>{const a=__SEOUL_APP__;a.core();a.goal.yaw=yaw;Object.assign(a.cam,a.goal);a.render();}',yaw)
+  before=page.evaluate('__SEOUL_APP__.project(0,0,0)')
+  page.click('#pan-up');page.wait_for_timeout(120)
+  up=page.evaluate('__SEOUL_APP__.project(0,0,0)')
+  assert up['y']>before['y']+20,(yaw,before,up)
+  page.click('#pan-right');page.wait_for_timeout(120)
+  right=page.evaluate('__SEOUL_APP__.project(0,0,0)')
+  assert right['x']<up['x']-20,(yaw,up,right)
+  record('direction-pad-screen-pan',{'yaw':yaw,'upPixels':up['y']-before['y'],'rightPixels':up['x']-right['x']})
+ page.locator('#scene').focus()
+ before=page.evaluate('__SEOUL_APP__.project(0,0,0)')
+ page.keyboard.press('ArrowLeft');page.wait_for_timeout(120)
+ after=page.evaluate('__SEOUL_APP__.project(0,0,0)')
+ assert after['x']>before['x']+20,(before,after)
+ record('canvas-arrow-key-pan',{'leftPixels':after['x']-before['x']})
  # Right and shift-drag rotation remains available, not primary.
  for shift in [False,True]:
   page.evaluate("()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}")
@@ -106,6 +123,11 @@ with sync_playwright() as p:
  # Mobile touch pan and pinch. Dispatch browser touch events via CDP.
  mobile=load(b,viewport={'width':390,'height':844},is_mobile=True,has_touch=True,device_scale_factor=1)
  mobile.evaluate("()=>{const a=__SEOUL_APP__;a.core();Object.assign(a.cam,a.goal);a.render();}")
+ before=mobile.evaluate('__SEOUL_APP__.project(0,0,0)')
+ mobile.locator('#pan-down').tap();mobile.wait_for_timeout(120)
+ after=mobile.evaluate('__SEOUL_APP__.project(0,0,0)')
+ assert after['y']<before['y']-20,(before,after)
+ record('mobile-direction-pad',{'downPixels':before['y']-after['y']})
  cdp=mobile.context.new_cdp_session(mobile)
  before=mobile.evaluate('({p:__SEOUL_APP__.project(0,0,0),yaw:__SEOUL_APP__.cam.yaw})')
  cdp.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':160,'y':420,'id':1}]})

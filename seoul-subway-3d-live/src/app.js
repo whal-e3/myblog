@@ -550,9 +550,16 @@
     const pointers=new Map();let gesture=null,downPoint=null;
     function pointerDistance(){const p=[...pointers.values()];return p.length>1?Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y):0;}
     function pointerCenter(){const p=[...pointers.values()];return{x:p.reduce((v,k)=>v+k.x,0)/p.length,y:p.reduce((v,k)=>v+k.y,0)/p.length};}
-    function pan(dx,dy){
+    function pan(dx,dy,instant=true){
       releaseZoomAnchor();stopAutomaticCamera();const units=goal.scale/height,cy=Math.cos(goal.yaw),sy=Math.sin(goal.yaw),sp=Math.max(.0001,Math.sin(goal.pitch));
-      goal.x-=dx*units*cy;goal.z+=dx*units*sy;goal.x-=dy*units*sy/sp;goal.z-=dy*units*cy/sp;goal.x=clamp(goal.x,-160,160);goal.z=clamp(goal.z,-160,160);cam.x=goal.x;cam.z=goal.z;state.scope='custom';updateScope();dirty=true;
+      goal.x-=dx*units*cy;goal.z+=dx*units*sy;goal.x-=dy*units*sy/sp;goal.z-=dy*units*cy/sp;goal.x=clamp(goal.x,-160,160);goal.z=clamp(goal.z,-160,160);
+      if(instant){cam.x=goal.x;cam.z=goal.z;}
+      state.scope='custom';updateScope();dirty=true;
+    }
+    const panDirections={up:[0,1],down:[0,-1],left:[1,0],right:[-1,0]};
+    function nudgePan(direction){
+      const [dx,dy]=panDirections[direction],step=clamp(height*.12,48,96);
+      pan(dx*step,dy*step,false);
     }
     canvas.addEventListener('contextmenu',e=>e.preventDefault());
     canvas.addEventListener('pointerdown',e=>{
@@ -618,6 +625,22 @@
     function home(){cancelIntro();state.orbit=false;$('orbit').setAttribute('aria-pressed','false');$('orbit').classList.remove('active');showAll();fitAll(false,true);$('search').value='';$('results').hidden=true;closeMobile();}
     $('brand-home').onclick=home;$('nav-explore').onclick=home;$('scope-full').onclick=()=>{showAll();fitAll();};$('scope-core').onclick=core;$('fit').onclick=()=>fitAll();$('mini-reset').onclick=()=>{showAll();fitAll();};
     $('zoom-in').onclick=()=>zoom(.8);$('zoom-out').onclick=()=>zoom(1.25);$('north').onclick=()=>{releaseZoomAnchor();stopAutomaticCamera();goal.yaw=0;dirty=true;};$('rotate-left').onclick=()=>rotateBy(-Math.PI/8);$('rotate-right').onclick=()=>rotateBy(Math.PI/8);$('orbit').onclick=toggleOrbit;
+    for(const direction of Object.keys(panDirections)){
+      const button=$(`pan-${direction}`);let holdTimer,repeatTimer,held=false;
+      const stop=()=>{clearTimeout(holdTimer);clearInterval(repeatTimer);};
+      button.addEventListener('pointerdown',event=>{
+        if(event.button!==0)return;
+        held=false;button.setPointerCapture(event.pointerId);
+        holdTimer=setTimeout(()=>{
+          held=true;nudgePan(direction);
+          repeatTimer=setInterval(()=>nudgePan(direction),110);
+        },320);
+      });
+      button.addEventListener('pointerup',stop);
+      button.addEventListener('pointercancel',()=>{stop();held=false;});
+      button.addEventListener('lostpointercapture',stop);
+      button.addEventListener('click',()=>{if(!held)nudgePan(direction);held=false;});
+    }
     $('show-all').onclick=showAll;$('show-none').onclick=()=>{state.visible.fill(false);updateVisibility();};$('restore').onclick=()=>{showAll();fitAll();};
     $('labels-toggle').onchange=e=>{state.labels=e.target.checked;dirty=true;};
     $('motion-toggle').onchange=e=>setMotion(e.target.checked);
@@ -653,7 +676,11 @@
       if(e.key.toLowerCase()==='n'){releaseZoomAnchor();stopAutomaticCamera();goal.yaw=0;dirty=true;}
       if(e.key==='+'||e.key==='=')zoom(.8);if(e.key==='-')zoom(1.25);
       if(e.key==='Escape'){clearSelection();$('results').hidden=true;closeMobile();}
-      if(e.target===canvas&&e.key.startsWith('Arrow')){e.preventDefault();pan(e.key==='ArrowLeft'?50:e.key==='ArrowRight'?-50:0,e.key==='ArrowUp'?50:e.key==='ArrowDown'?-50:0);}
+      const panDirection=e.key.startsWith('Arrow')?e.key.slice(5).toLowerCase():null;
+      if(panDirection&&Object.hasOwn(panDirections,panDirection)&&
+         (e.target===canvas||e.target===document.body||e.target.closest?.('.view-tools'))){
+        e.preventDefault();nudgePan(panDirection);
+      }
     });
     canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();fatal(new Error('The graphics context was lost. Reload to restore it.'));});
     window.addEventListener('seoul:themechange',()=>{

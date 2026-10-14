@@ -102,8 +102,10 @@ per-client limits, and a shared server-side feed cache.
 - The map opens from above and slowly tilts into a 3D view. Moving the map interrupts
   this introduction. Reduced-motion settings skip the animation.
 - **Left-drag / one-finger drag:** pan in the direction of your drag. The map's angle does
-  not change. **Right-drag or Shift-drag:** rotate the view. The on-map arrow buttons
-  also rotate it.
+  not change. **Arrow keys** and the on-map **Move** arrows pan the view in four
+  directions, including on touch screens. Hold a Move arrow to keep panning.
+  **Right-drag or Shift-drag:** rotate the view.
+  The separate **Rotate** arrows also turn it.
 - **Mouse wheel:** zoom around the point under the cursor; it stays pinned during easing.
   Two fingers pan and pinch around their midpoint. Manual gestures stop camera-follow
   and auto-orbit, but do not stop real data updates.

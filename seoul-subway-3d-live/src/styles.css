@@ -234,3 +234,22 @@ html[data-theme="dark"] .overview-network>button:hover{background:#1d3954}
 html[data-theme="dark"] .rotate-control{border-color:#3b5873;color:#acc7df}
 html[data-theme="dark"] .rotate-control button{color:#9fd1ff}
 html[data-theme="dark"] .rotate-control button:hover{background:#294c6b}
+
+/* The Move pad sits inside the toolbar; Rotate shares its width to keep it short. */
+.view-tools{align-items:center}
+.rotate-control{width:69px}
+.rotate-control>div{flex-direction:row;justify-content:space-between}
+.pan-control{width:69px;margin:1px 0 3px;padding:3px 3px 2px;border-block:1px solid #c9d8e7;text-align:center;color:#547391}
+.pan-control>span{display:block;font-size:7px;font-weight:700;letter-spacing:.5px;line-height:1.4}
+.pan-control>div{display:grid;grid-template-columns:repeat(2,30px);gap:1px}
+.pan-control button{display:grid;place-items:center;width:30px;height:30px;padding:0;border-radius:3px;font-size:18px;line-height:1;color:#0052a4;touch-action:none;user-select:none}
+.pan-control button:hover,.pan-control button:active{background:#e1effb}
+html[data-theme="dark"] .pan-control{border-color:#3b5873;color:#acc7df}
+html[data-theme="dark"] .pan-control button{color:#9fd1ff}
+html[data-theme="dark"] .pan-control button:hover,html[data-theme="dark"] .pan-control button:active{background:#294c6b}
+.station-card,.line-card,.train-card{right:122px}
+@media(max-width:1180px){.station-card,.line-card,.train-card{right:110px}}
+@media(max-width:780px){
+  .station-card,.line-card,.train-card{right:105px;width:calc(100% - 128px)}
+}
+@media(max-width:780px) and (max-height:630px){.view-tools{top:72px}}
