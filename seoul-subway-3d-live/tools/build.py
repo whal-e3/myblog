@@ -2,6 +2,7 @@
 """Build a standalone map preview with offline simulated trains."""
 from pathlib import Path
 import argparse
+from shutil import copyfile
 
 
 def build(destination: Path) -> Path:
@@ -39,6 +40,15 @@ def build(destination: Path) -> Path:
         html = html.replace(marker, content)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(html, encoding="utf-8")
+    # Keep selected-place photos alongside the standalone preview. The source
+    # directory contains only reviewed, credited WebP assets.
+    photo_dir = root / 'assets' / 'photos'
+    if photo_dir.is_dir():
+        preview_photos = destination.parent / 'assets' / 'photos'
+        preview_photos.mkdir(parents=True, exist_ok=True)
+        for photo in photo_dir.glob('*.webp'):
+            if photo.is_file() and not photo.is_symlink():
+                copyfile(photo, preview_photos / photo.name)
     return destination
 
 

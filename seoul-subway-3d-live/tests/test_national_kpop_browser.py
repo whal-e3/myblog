@@ -53,6 +53,18 @@ with sync_playwright() as playwright:
     }''')
     assert counts['seoul'] == 24 and counts['urban'] >= 12 and counts['intercity'] >= 1, counts
     assert counts['segments'] > 50 and counts['places'] == 11, counts
+    landmarks = page.evaluate('''() => Object.fromEntries(__SEOUL_APP__.kpop.sites.map(site =>
+      [site.id, {lat:site.lat,lon:site.lon,modelX:site.modelX,modelZ:site.modelZ}]))''')
+    assert landmarks['k_star_road']['lat'] == 37.5277244, 'K-Star Road visitor pin must remain at Exit 2'
+    assert landmarks['kbs_hall']['lat'] == 37.525825, 'KBS Hall pin must remain on the hall'
+    assert landmarks['coex_kpop_square']['modelX'] != page.evaluate('''() =>
+      __SEOUL_APP__.kpop.sites.find(site => site.id==='coex_kpop_square').x'''), 'COEX public square and Artium model are separate'
+    photo_choices = page.evaluate('''() => __SEOUL_APP__.kpop.sites.map(site => ({
+      id:site.id, photo:site.photo?.src, source:site.photoUrl
+    }))''')
+    assert len(photo_choices) == 11 and all(item['photo'] or item['source'] for item in photo_choices)
+    assert {item['id'] for item in photo_choices if item['photo']} == {'k_star_road', 'kbs_hall'}
+    assert all((root / item['photo']).is_file() for item in photo_choices if item['photo'])
     print('PASS independent Seoul, national and K-pop datasets:', counts, flush=True)
     page.locator('#national-panel > summary').click()
 
@@ -86,7 +98,8 @@ with sync_playwright() as playwright:
       const a=__SEOUL_APP__, hit=a.getKpopHits().find(h=>h.site?.id==='coex_kpop_square');
       return a.cam.scale<=1 && !!hit?.drawn;
     }'''), 'Selected place should zoom close enough to show its 3D form'
-    assert page.locator('#place-card a').get_attribute('href').startswith('https://')
+    assert page.get_by_role('link', name='Place information').get_attribute('href').startswith('https://')
+    assert page.locator('#place-card .place-photo-source').get_attribute('href').startswith('https://')
     page.screenshot(path=str(out / 'seoul-kpop-place.png'))
     for landmark in ('hybe', 'yg', 'kbs_hall', 'cj_enm', 'mbc_media', 'k_star_road'):
         page.evaluate('''id => {
@@ -98,6 +111,13 @@ with sync_playwright() as playwright:
         assert page.evaluate('''() => __SEOUL_APP__.getKpopHits()
           .filter(hit => hit.site).length''') == 1, 'Close place view should isolate its model'
         page.screenshot(path=str(out / f'seoul-kpop-{landmark}.png'))
+        if landmark == 'kbs_hall':
+            assert page.locator('#place-card .place-photo img').get_attribute('alt').startswith('The circular glass exterior')
+            assert page.locator('#place-card .photo-open').get_attribute('href') == 'assets/photos/kbs_hall.webp'
+            assert 'Narubaru7' in page.locator('#place-card .place-photo figcaption').inner_text()
+            assert (root / 'assets/photos/kbs_hall.webp').is_file()
+        if landmark == 'k_star_road':
+            assert 'Matt Kieffer' in page.locator('#place-card .place-photo figcaption').inner_text()
     page.locator('#kpop-toggle').uncheck()
     page.evaluate('__SEOUL_APP__.render()')
     assert page.evaluate('__SEOUL_APP__.getKpopHits().length') == 0

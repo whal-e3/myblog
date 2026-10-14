@@ -462,9 +462,11 @@
       resetTrain();state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();
       cancelIntro();releaseZoomAnchor();state.kpop=true;$('kpop-toggle').checked=true;
       state.selectedNationalLine=null;state.selectedPlace=id;state.scope='custom';updateScope();
-      goal.x=site.x;goal.z=site.z;goal.y=.115+(window.SeoulKpopModels.siteLooks[site.id]?.height||0)*.52;
+      const modelX=site.modelX??site.x,modelZ=site.modelZ??site.z;
+      goal.x=(site.x+modelX)/2;goal.z=(site.z+modelZ)/2;
+      goal.y=.115+(window.SeoulKpopModels.siteLooks[site.id]?.height||0)*.52;
       goal.yaw=.35;goal.pitch=.67;
-      goal.scale=width<600?(id==='cj_enm'||id==='mbc_media'?.55:.44):.32;
+      goal.scale=width<600?(id==='coex_kpop_square'?.65:id==='cj_enm'||id==='mbc_media'?.55:.44):id==='coex_kpop_square'?.42:.32;
       if(width<600){
         // Reserve room for the mobile view controls while keeping the model centered vertically.
         const shift=62*goal.scale/height;
@@ -475,7 +477,12 @@
     }
     function updateAuxCards(){
       const place=P.sites.find(s=>s.id===state.selectedPlace),pc=$('place-card');pc.hidden=!place;
-      if(place)pc.innerHTML=`<div class="card-top"><span class="eyebrow">K-POP PLACE / 성지</span><button class="card-close" data-close-aux aria-label="Close place details">${icon('close')}</button></div><h2>${escapeHTML(place.name)}</h2><div class="station-english">${escapeHTML(place.ko)}</div><p>${escapeHTML(place.description)}</p><p class="place-visit">${escapeHTML(place.visit)}</p><div class="station-coordinates">${escapeHTML(place.address)}<br>${place.lat.toFixed(5)}° N · ${place.lon.toFixed(5)}° E</div><p class="card-note">Exterior-inspired 3D sketch; dimensions and details remain illustrative.</p><a href="${escapeHTML(place.url)}" target="_blank" rel="noopener noreferrer">Place information ↗</a>`;
+      if(place){
+        const photo=place.photo;
+        const photoHTML=photo?`<figure class="place-photo"><a class="photo-open" href="${escapeHTML(photo.src)}" target="_blank" rel="noopener noreferrer" aria-label="Open full photo of ${escapeHTML(place.name)}"><img src="${escapeHTML(photo.src)}" alt="${escapeHTML(photo.alt)}" loading="eager" decoding="async" style="object-position:${escapeHTML(photo.position||'center')}"></a><figcaption>REAL PHOTO${photo.date?' · '+escapeHTML(photo.date):''} · <a href="${escapeHTML(photo.source)}" target="_blank" rel="noopener noreferrer">${escapeHTML(photo.author)}</a> · <a href="${escapeHTML(photo.licenseUrl)}" target="_blank" rel="noopener noreferrer">${escapeHTML(photo.license)}</a>${photo.modified?' · resized/cropped':''}</figcaption></figure>`:
+          place.photoUrl?`<a class="place-photo-source" href="${escapeHTML(place.photoUrl)}" target="_blank" rel="noopener noreferrer"><span>REAL PHOTO</span> Open at source ↗</a>`:'';
+        pc.innerHTML=`<div class="card-top"><span class="eyebrow">K-POP PLACE / 성지</span><button class="card-close" data-close-aux aria-label="Close place details">${icon('close')}</button></div><h2>${escapeHTML(place.name)}</h2><div class="station-english">${escapeHTML(place.ko)}</div>${photoHTML}<p>${escapeHTML(place.description)}</p><p class="place-visit">${escapeHTML(place.visit)}</p><div class="station-coordinates">${escapeHTML(place.address)}<br>${place.lat.toFixed(5)}° N · ${place.lon.toFixed(5)}° E</div><p class="card-note">Exterior-inspired 3D sketch; dimensions and details remain illustrative.</p><a href="${escapeHTML(place.url)}" target="_blank" rel="noopener noreferrer">Place information ↗</a>`;
+      }
       const i=state.selectedNationalLine,nc=$('national-card');nc.hidden=i===null;
       if(i!==null){const line=N.lines[i],count=nationalSegments[i].length;nc.innerHTML=`<div class="card-top"><span class="eyebrow">${escapeHTML(line.group.toUpperCase())} / STATIC RAIL</span><button class="card-close" data-close-aux aria-label="Close route details">${icon('close')}</button></div><h2>${escapeHTML(line.name)}</h2><div class="station-english">${escapeHTML(line.ko||'')}</div><p>${escapeHTML(line.city||'South Korea')} · ${escapeHTML(line.mode||'Passenger rail')}</p><p class="card-note">${count} mapped track segments from OpenStreetMap. This layer shows rail alignment, not live trains, timetables or a guarantee that every service stops here.</p>`;}
     }
@@ -581,7 +588,7 @@
       const shortNames={hybe:'HYBE',sm:'SM',jyp:'JYP',yg:'YG',k_star_road:'K-Star Road',coex_kpop_square:'COEX K-POP',hongdae_kpop_square:'K-Pop Square',hikr_ground:'HiKR Ground',kbs_hall:'KBS Hall',cj_enm:'CJ ENM',mbc_media:'MBC'};
       const closePlace=state.selectedPlace!==null&&cam.scale<1.5;
       const sites=closePlace?P.sites.filter(site=>site.id===state.selectedPlace):P.sites;
-      const visible=sites.map(site=>({site,p:project(site.x,.1,site.z)}))
+      const visible=sites.map(site=>({site,p:project(closePlace?(site.modelX??site.x):site.x,.1,closePlace?(site.modelZ??site.z):site.z)}))
         .filter(({p})=>p.x>-60&&p.x<width+60&&p.y>65&&p.y<height+45)
         .sort((a,b)=>a.p.y-b.p.y);
       for(const {site,p} of visible){

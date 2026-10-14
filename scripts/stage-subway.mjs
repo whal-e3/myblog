@@ -2,7 +2,7 @@
 
 // Explicit, release-only copy of the files needed at /miniprj/seoul-subway/.
 // Nothing calls this script from the normal Astro build.
-import { copyFile, mkdir, stat } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,4 +54,14 @@ for (const file of files) {
   await mkdir(dirname(target), { recursive: true });
   await copyFile(join(source, file), target);
 }
-console.log(`Staged ${files.length} subway assets in ${destination}`);
+const photos = await readdir(join(source, 'assets', 'photos'), { withFileTypes: true });
+let photoCount = 0;
+for (const photo of photos) {
+  if (!photo.isFile() || !/^[a-z0-9_-]+\.webp$/.test(photo.name)) continue;
+  const path = join('assets', 'photos', photo.name);
+  const target = join(destination, path);
+  await mkdir(dirname(target), { recursive: true });
+  await copyFile(join(source, path), target);
+  photoCount++;
+}
+console.log(`Staged ${files.length + photoCount} subway assets in ${destination}`);

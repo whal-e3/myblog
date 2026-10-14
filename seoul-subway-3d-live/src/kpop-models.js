@@ -39,23 +39,27 @@
       ? options.theme?.background?.toLowerCase() === '#081726'
       : !!options.dark;
     const groundY = .115;
-    const ground = project(site.x, groundY, site.z);
+    const marker = project(site.x, groundY, site.z);
     const screenWidth = look.width * pixelsPerKm;
     // Citywide views show precise, restrained point symbols. A small real-sized
     // building at this scale cannot support legible facade or roof detail.
     if (screenWidth < 24) {
       const r = selected ? 6.5 : 4.7;
       ctx.save();
-      ctx.beginPath(); ctx.arc(ground.x, ground.y, r + 2, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(marker.x, marker.y, r + 2, 0, Math.PI * 2);
       ctx.fillStyle = dark ? 'rgba(9,24,38,.82)' : 'rgba(255,255,255,.90)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(ground.x, ground.y, r, 0, Math.PI * 2);
+      ctx.beginPath(); ctx.arc(marker.x, marker.y, r, 0, Math.PI * 2);
       ctx.fillStyle = selected ? '#e28d4c' : '#7e6e76'; ctx.fill();
       ctx.lineWidth = selected ? 1.4 : .7;
       ctx.strokeStyle = dark ? '#e3e7e6' : '#465767'; ctx.stroke();
       ctx.restore();
-      return {x: ground.x, y: ground.y, topY: ground.y, r: Math.max(13, r + 7), drawn: false};
+      return {x: marker.x, y: marker.y, topY: marker.y, r: Math.max(13, r + 7), drawn: false};
     }
 
+    // A venue's visitor point can differ from the adjacent building represented
+    // by its 3D model (for example the public COEX square and Artium facade).
+    const modelX = site.modelX ?? site.x, modelZ = site.modelZ ?? site.z;
+    const ground = project(modelX, groundY, modelZ);
     // Public entrances and signature facades in the sketches are on local -z.
     // Face those southward, where the map's default close camera looks from.
     const angle = look.angle + Math.PI;
@@ -65,7 +69,7 @@
     const eyeU = eyeX * cos + eyeZ * sin, eyeV = -eyeX * sin + eyeZ * cos;
     const visible = {front: -eyeV > .01, back: eyeV > .01, right: eyeU > .01, left: -eyeU > .01};
     const faces = [];
-    const at = (u, y, v) => [site.x + u * cos - v * sin, groundY + y, site.z + u * sin + v * cos];
+    const at = (u, y, v) => [modelX + u * cos - v * sin, groundY + y, modelZ + u * sin + v * cos];
     function face(points, color, edge = null, lineWidth = .45, overlay = false) {
       const projected = points.map(p => project(...at(...p)));
       const depth = projected.reduce((sum, p) => sum + p.depth, 0) / projected.length;
@@ -474,8 +478,18 @@
       ctx.closePath();
       ctx.strokeStyle = dark ? 'rgba(202,220,231,.58)' : 'rgba(54,91,111,.42)';
       ctx.lineWidth = 1; ctx.stroke();
+      if (modelX !== site.x || modelZ !== site.z) {
+        const visitor = project(site.x, groundY + .001, site.z);
+        ctx.beginPath(); ctx.moveTo(ground.x, ground.y); ctx.lineTo(visitor.x, visitor.y);
+        ctx.setLineDash([4,4]);
+        ctx.strokeStyle = dark ? 'rgba(244,189,143,.76)' : 'rgba(176,91,57,.7)';
+        ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(visitor.x, visitor.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = dark ? '#f0ad78' : '#cd6d46'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = dark ? '#101e2b' : '#fff'; ctx.stroke();
+      }
     }
-    const top = project(site.x, groundY + look.height, site.z);
+    const top = project(modelX, groundY + look.height, modelZ);
     ctx.restore();
     return {x:ground.x,y:top.y,topY:top.y,r:clamp(screenWidth*.63+6,15,78),drawn:true};
   }

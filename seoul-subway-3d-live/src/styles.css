@@ -244,12 +244,20 @@ html[data-theme="dark"] .pan-control button:hover,html[data-theme="dark"] .pan-c
 .place-card .place-visit{color:var(--text);font-weight:550}
 .place-card .station-coordinates{font-size:9px;line-height:1.6;color:var(--muted);padding-top:11px;margin-top:11px;border-top:1px solid var(--line)}
 .place-card a{display:block;font-size:10px;color:var(--accent);margin-top:13px}
+.place-photo{margin:11px 0 13px;overflow:hidden;border:1px solid var(--line);border-radius:7px;background:var(--map)}
+.place-card .place-photo .photo-open{display:block;margin:0}
+.place-photo img{display:block;width:100%;height:155px;object-fit:cover;background:var(--map)}
+.place-photo figcaption{padding:6px 8px;font-size:8px;line-height:1.4;color:var(--muted)}
+.place-photo figcaption a{display:inline;font-size:inherit;margin:0;text-decoration:underline;text-underline-offset:2px}
+.place-card .place-photo-source{display:flex;align-items:center;gap:7px;margin:11px 0 13px;padding:10px 11px;border:1px solid var(--line);border-radius:7px;background:var(--map);line-height:1.3}
+.place-photo-source span{font-size:8px;letter-spacing:.08em;font-weight:700;color:var(--muted)}
 html[data-theme="dark"] .national-panel{background:var(--panel)}
 html[data-theme="dark"] .regional-focus button{background:var(--surface);border-color:var(--line)}
 html[data-theme="dark"] :is(.place-card,.national-card){background:var(--card);border-color:#35516d;box-shadow:var(--shadow)}
 html[data-theme="dark"] :is(.place-card h2,.national-card h2){color:var(--text)}
 @media(max-width:1180px){.place-card,.national-card{right:110px}}
 @media(max-width:780px){.place-card,.national-card{top:120px;right:105px;width:calc(100% - 128px);max-height:calc(100% - 230px);padding:14px}.map-legend{bottom:63px;gap:4px}.map-legend>span{font-size:7px}}
+@media(max-width:780px){.place-photo img{height:115px}}
 @media(max-height:630px){.place-card,.national-card{top:72px;max-height:calc(100% - 175px)}}
 @media(max-width:780px) and (max-height:630px){.view-tools{top:72px}}
 /* A selected place must remain visible beside its details on a narrow map. */

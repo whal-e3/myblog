@@ -37,6 +37,11 @@ def load_env(path: Path):
 def create_server(root: Path, feed: FeedClient, port: int):
     # Explicit assets only. Never expose .env, runtime files, server code, or directory listings.
     assets = {name: root/name for name in ['index.html', 'src/styles.css', 'src/theme.js', 'src/app.js', 'src/trains.js', 'src/live.js', 'src/simulation.js', 'src/kpop-models.js', 'data/network.js', 'data/korea.js', 'data/national-rail.js', 'data/kpop.js', 'data/train-density-profile.js', 'data/train-density-profile.json']}
+    photo_dir = root / 'assets' / 'photos'
+    if photo_dir.is_dir():
+        for photo in photo_dir.glob('*.webp'):
+            if photo.is_file() and not photo.is_symlink():
+                assets[f'assets/photos/{photo.name}'] = photo
 
     class Handler(BaseHTTPRequestHandler):
         server_version = 'SeoulSubsurface'
@@ -93,8 +98,13 @@ def create_server(root: Path, feed: FeedClient, port: int):
             path = assets.get(name)
             if path is None or not path.is_file():
                 return self.json(404, {'error': 'Not found.'})
-            mime = 'text/javascript' if path.suffix == '.js' else (mimetypes.guess_type(name)[0] or 'application/octet-stream')
-            self.reply(200, path.read_bytes(), mime+'; charset=utf-8')
+            if path.suffix == '.js':
+                mime = 'text/javascript; charset=utf-8'
+            elif path.suffix == '.webp':
+                mime = 'image/webp'
+            else:
+                mime = (mimetypes.guess_type(name)[0] or 'application/octet-stream') + '; charset=utf-8'
+            self.reply(200, path.read_bytes(), mime)
 
     srv = ThreadingHTTPServer(('127.0.0.1', port), Handler)
     srv.daemon_threads = True
