@@ -88,13 +88,15 @@ with sync_playwright() as playwright:
     }'''), 'Selected place should zoom close enough to show its 3D form'
     assert page.locator('#place-card a').get_attribute('href').startswith('https://')
     page.screenshot(path=str(out / 'seoul-kpop-place.png'))
-    for landmark in ('hybe', 'yg', 'kbs_hall', 'mbc_media', 'k_star_road'):
+    for landmark in ('hybe', 'yg', 'kbs_hall', 'cj_enm', 'mbc_media', 'k_star_road'):
         page.evaluate('''id => {
           const a=__SEOUL_APP__;a.selectPlace(id);Object.assign(a.cam,a.goal);a.render();
         }''', landmark)
         assert page.evaluate('''id => {
           const a=__SEOUL_APP__;return a.getKpopHits().some(h=>h.site?.id===id&&h.drawn);
         }''', landmark), landmark
+        assert page.evaluate('''() => __SEOUL_APP__.getKpopHits()
+          .filter(hit => hit.site).length''') == 1, 'Close place view should isolate its model'
         page.screenshot(path=str(out / f'seoul-kpop-{landmark}.png'))
     page.locator('#kpop-toggle').uncheck()
     page.evaluate('__SEOUL_APP__.render()')

@@ -86,10 +86,10 @@ window.KOREA_KPOP_SITES = {
     {
       id: "kbs_hall", name: "KBS Hall", ko: "KBS홀",
       lat: 37.5259532, lon: 126.9152896, category: "broadcast", shape: "hall",
-      address: "359 Yeouidaebang-ro, Yeongdeungpo-gu, Seoul",
-      description: "Yeouido KBS venue associated with Music Bank broadcasts.",
-      visit: "Exterior is viewable; studio audience access requires official admission.",
-      url: "https://english.visitkorea.or.kr/svc/contents/contentsView.do?dataSetId=68&menuSn=862&vcontsId=200728",
+      address: "13 Yeouigongwon-ro, Yeongdeungpo-gu, Seoul",
+      description: "Circular performance hall in KBS's Yeouido complex.",
+      visit: "View the exterior from public areas; check KBS for event and admission details.",
+      url: "https://culture.seoul.go.kr/culture/culture/cultureSpace/view.do?facCode=100282&menuNo=200119",
       coordUrl: "https://www.openstreetmap.org/node/4388013925"
     },
     {
