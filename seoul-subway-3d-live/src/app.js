@@ -9,6 +9,8 @@
   const $ = id => document.getElementById(id);
   const D = window.SEOUL_DATA;
   const K = window.SEOUL_KOREA;
+  const N = window.KOREA_RAIL_DATA || {lines:[],stations:[],segments:[]};
+  const P = window.KOREA_KPOP_SITES || {sites:[]};
   const T = window.SeoulTrains;
   let canvas = $('scene');
   const overlay = $('labels'), viewport = $('viewport');
@@ -34,7 +36,7 @@
 
   function start() {
     const DEFAULT_YAW=-.25,DEFAULT_PITCH=.72;
-    const state={visible:D.lines.map(()=>true), selectedLine:null, selectedStation:null, scope:'full', labels:true, motion:!reduced, orbit:false, trainSize:1.25, selectedTrain:null, followTrain:false};
+    const state={visible:D.lines.map(()=>true), selectedLine:null, selectedStation:null, selectedNationalLine:null, selectedPlace:null, nationalUrban:true, nationalIntercity:true, kpop:true, scope:'full', labels:true, motion:!reduced, orbit:false, trainSize:1.25, selectedTrain:null, followTrain:false};
     const cam={x:0,y:0,z:0,scale:110,yaw:0,pitch:Math.PI/2,spread:.12};
     const goal={...cam};
     let width=100,height=100,dpr=1,aspect=1,vp=new Float32Array(16), lastFrame=0,dirty=true, moving=false, projected=[], hover=null;
@@ -44,12 +46,17 @@
     const live=window.SeoulLive.create(D,T),fleet=live.fleet;
     const trainPose=(train,clock,scale)=>live.pose(train,clock,scale,state.motion);
     let visibleFeeds="";
-    let trainClock=0,trainInstances=[],trainHits=[],trainPoses=[];
+    let trainClock=0,trainInstances=[],trainHits=[],trainPoses=[],kpopHits=[],nationalHits=[];
     let previewYaw=-.67,previewPitch=.40;
     // Orthographic zoom uses CSS-pixel coordinates, independent of the display DPR.
     const MIN_SCALE=.5,MAX_SCALE=2200;
     let zoomAnchor=null;
     const colors=D.lines.map(l=>rgb(l.color));
+    const nationalSegments=N.lines.map(()=>[]);
+    for(const segment of N.segments)if(nationalSegments[segment.line])nationalSegments[segment.line].push(segment);
+    const nationalVisible=i=>N.lines[i]?.group==='Urban'?state.nationalUrban:state.nationalIntercity;
+    const nationalColor=i=>N.lines[i].color||'#7b8fa5';
+    const updateEmptyState=()=>{$('empty-state').hidden=state.visible.some(Boolean)||N.lines.some((_,i)=>nationalVisible(i))||(state.kpop&&P.sites.length>0);};
     const majorNames=['서울','서울역','강남','홍대입구','김포공항','인천공항1터미널','인천공항2터미널','인천','수원','춘천','천안','청량리','왕십리','잠실','고속터미널','사당','공덕','용산','신도림','판교','동탄','운정중앙','동두천','연천','여주','지평','문산','대곡','금정','부평','정자'];
     const stationPriority=s=>(state.selectedStation===s.id?100000:0)+(majorNames.includes(s.ko)?200:0)+s.lines.length*12+(s.transliterated?0:2);
     const sortedStations=[...D.stations].sort((a,b)=>stationPriority(b)-stationPriority(a));
@@ -113,6 +120,7 @@
     function resetTrain(){state.selectedTrain=null;state.followTrain=false;$('train-card').hidden=true;}
     function selectTrain(id){
       cancelIntro();releaseZoomAnchor();const train=fleet.trains[id];if(!train)return;
+      clearAux();
       state.selectedTrain=id;state.selectedLine=null;state.selectedStation=null;state.followTrain=true;
       state.visible[train.line]=true;state.scope='custom';state.orbit=false;
       $('orbit').setAttribute('aria-pressed','false');$('orbit').classList.remove('active');
@@ -157,6 +165,7 @@
     function pathLines(paths,y){let a=[];for(const p of paths)for(let j=1;j<p.length;j++)a.push(p[j-1][0],y,p[j-1][1],p[j][0],y,p[j][1]);return buffer(a);}
     const coast=pathLines(K.rings.map(r=>[...r,r[0]]),.03);
     const borders=pathLines(D.surface.boundaries,.04), seoulOutline=pathLines(D.surface.seoul,.06), waterEdges=pathLines(D.surface.waterOutlines,.028);
+    const nationalMeshes=nationalSegments.map(segments=>pathLines(segments.map(s=>s.points),.075));
     const lineVertices=D.lines.map(()=>[]);
     const SIDES=7;
     for(const e of D.segments){
@@ -198,6 +207,13 @@
       flatDraw(land,rgba(mapTheme.land),gl.TRIANGLES);flatDraw(coast,rgba(mapTheme.coast,mapTheme.coastAlpha));
       const detail=surfaceDetail();
       if(detail){flatDraw(water,rgba(mapTheme.water,.9*detail),gl.TRIANGLES);flatDraw(waterEdges,rgba(mapTheme.waterEdge,mapTheme.waterEdgeAlpha*detail));flatDraw(borders,rgba(mapTheme.boundary,mapTheme.boundaryAlpha*detail));flatDraw(seoulOutline,rgba(mapTheme.seoul,mapTheme.seoulAlpha*detail));}
+      // National corridors are static track geometry, never train-position feeds.
+      gl.depthMask(false);
+      for(let i=0;i<N.lines.length;i++)if(nationalVisible(i)){
+        const emphasized=state.selectedNationalLine===i;
+        flatDraw(nationalMeshes[i],rgba(nationalColor(i),emphasized?.98:(N.lines[i].group==='Urban'?.80:.55)));
+      }
+      gl.depthMask(true);
       const transitions=[],stationData=[];projected=[];
       const baseRadius=baseRailRadius();
       const emph=currentEmphasis();
@@ -255,6 +271,15 @@
       return function drawSoftware(time){
         c.setTransform(dpr,0,0,dpr,0,0);c.globalAlpha=1;c.fillStyle=mapTheme.background;c.fillRect(0,0,width,height);c.lineJoin='round';c.lineCap='round';
         drawSurface();
+        for(let li=0;li<N.lines.length;li++){
+          if(!nationalVisible(li))continue;
+          c.beginPath();for(const segment of nationalSegments[li])path(segment.points,.075);
+          c.strokeStyle=nationalColor(li);
+          c.globalAlpha=state.selectedNationalLine===li?1:N.lines[li].group==='Urban'?.82:.58;
+          c.lineWidth=state.selectedNationalLine===li?2.5:N.lines[li].group==='Urban'?1.75:1.25;
+          c.stroke();
+        }
+        c.globalAlpha=1;
         projected=[];
         if(cam.spread>.025){c.beginPath();for(const s of D.stations){const ls=activeLines(s);if(ls.length<2)continue;const hs=ls.map(lineHeight),a=project(s.x,Math.min(...hs),s.z),b=project(s.x,Math.max(...hs),s.z);c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);}c.strokeStyle=cssRGBA(mapTheme.connector,mapTheme.connectorAlpha);c.lineWidth=.8;c.stroke();}
         const order=D.lines.map((_,i)=>i).sort((a,b)=>lineOpacity(a)-lineOpacity(b)||lineHeight(a)-lineHeight(b));
@@ -361,13 +386,74 @@
       if(instant)Object.assign(cam,goal);
       dirty=true;
     }
-    function fitAll(instant=false,reset=false){cancelIntro();cancelFollow();if(reset){goal.yaw=DEFAULT_YAW;goal.pitch=DEFAULT_PITCH;}state.scope='full';updateScope();fitStations(visibleStations(),instant);}
+    function fitAll(instant=false,reset=false){cancelIntro();cancelFollow();clearAux();if(reset){goal.yaw=DEFAULT_YAW;goal.pitch=DEFAULT_PITCH;}state.scope='full';updateScope();fitStations(visibleStations(),instant);}
     function country(){
       cancelIntro();cancelFollow();showAll();state.scope='country';
       goal.yaw=0;goal.pitch=Math.PI/2;goal.spread=.12;
       fitCountryCamera();updateScope();dirty=true;
     }
-    function core(){cancelIntro();releaseZoomAnchor();resetTrain();state.scope='core';state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();updateScope();goal.x=0;goal.z=-2;goal.y=0;goal.scale=width<600?49:37;dirty=true;}
+    function core(){cancelIntro();releaseZoomAnchor();resetTrain();clearAux();state.scope='core';state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();updateScope();goal.x=0;goal.z=-2;goal.y=0;goal.scale=width<600?49:37;dirty=true;}
+    function clearAux(){state.selectedPlace=null;state.selectedNationalLine=null;updateAuxCards();updateScope();dirty=true;}
+    function focusBounds(points,minimum=8){
+      if(!points.length)return;
+      cancelIntro();releaseZoomAnchor();cancelFollow();
+      let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
+      for(const p of points){minX=Math.min(minX,p[0]);maxX=Math.max(maxX,p[0]);minZ=Math.min(minZ,p[1]);maxZ=Math.max(maxZ,p[1]);}
+      goal.x=(minX+maxX)/2;goal.z=(minZ+maxZ)/2;goal.y=0;
+      goal.yaw=0;goal.pitch=.95;
+      goal.scale=clamp(Math.max((maxX-minX)/(aspect*(width<600?.73:.78)),(maxZ-minZ)/(width<600?.55:.68),minimum),minimum,MAX_SCALE);
+      state.scope='custom';updateScope();dirty=true;closeMobile();
+    }
+    function focusCity(city){
+      const points=[];
+      N.lines.forEach((line,i)=>{if(line.group==='Urban'&&line.city===city){state.nationalUrban=true;for(const s of nationalSegments[i])for(const p of s.points)points.push(p);}});
+      $('national-urban-toggle').checked=state.nationalUrban;
+      if(!points.length){
+        const centers={Busan:[129.0756,35.1796],Daegu:[128.6014,35.8714],Daejeon:[127.3845,36.3504],Gwangju:[126.8526,35.1595]};
+        const [lon,lat]=centers[city]||centers.Busan;goal.x=(lon-126.98)*88.28;goal.z=(37.53-lat)*111.32;goal.scale=32;goal.pitch=.95;state.scope='custom';updateScope();dirty=true;return;
+      }
+      clearAux();focusBounds(points,city==='Busan'?18:12);$('map-subtitle').textContent=`${city} · regional rail map`;
+    }
+    function focusKpop(){
+      state.kpop=true;$('kpop-toggle').checked=true;clearAux();focusBounds(P.sites.map(s=>[s.x,s.z]),15);
+      $('map-subtitle').textContent='Seoul · K-pop places (illustrative 3D)';
+    }
+    function focusNationalLine(i){
+      const line=N.lines[i];if(!line)return;
+      resetTrain();state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();
+      if(line.group==='Urban')state.nationalUrban=true;else state.nationalIntercity=true;
+      $('national-urban-toggle').checked=state.nationalUrban;$('national-intercity-toggle').checked=state.nationalIntercity;
+      state.selectedPlace=null;state.selectedNationalLine=i;
+      const points=nationalSegments[i].flatMap(s=>s.points);
+      focusBounds(points,12);updateAuxCards();$('map-subtitle').textContent=`${line.name} · static rail geometry`;
+    }
+    function selectPlace(id){
+      const site=P.sites.find(s=>s.id===id);if(!site)return;
+      resetTrain();state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();
+      cancelIntro();releaseZoomAnchor();state.kpop=true;$('kpop-toggle').checked=true;
+      state.selectedNationalLine=null;state.selectedPlace=id;state.scope='custom';updateScope();
+      goal.x=site.x;goal.z=site.z;goal.y=0;goal.pitch=.73;goal.scale=Math.min(goal.scale,width<600?8:10);
+      if(width<600)goal.z+=goal.scale*.22;
+      updateAuxCards();dirty=true;closeMobile();$('map-subtitle').textContent=`${site.name} · K-pop place`;
+    }
+    function updateAuxCards(){
+      const place=P.sites.find(s=>s.id===state.selectedPlace),pc=$('place-card');pc.hidden=!place;
+      if(place)pc.innerHTML=`<div class="card-top"><span class="eyebrow">K-POP PLACE / 성지</span><button class="card-close" data-close-aux aria-label="Close place details">${icon('close')}</button></div><h2>${escapeHTML(place.name)}</h2><div class="station-english">${escapeHTML(place.ko)}</div><p>${escapeHTML(place.description)}</p><p class="place-visit">${escapeHTML(place.visit)}</p><div class="station-coordinates">${escapeHTML(place.address)}<br>${place.lat.toFixed(5)}° N · ${place.lon.toFixed(5)}° E</div><p class="card-note">Original schematic 3D model. Building shape and height are illustrative.</p><a href="${escapeHTML(place.url)}" target="_blank" rel="noopener noreferrer">Official place information ↗</a>`;
+      const i=state.selectedNationalLine,nc=$('national-card');nc.hidden=i===null;
+      if(i!==null){const line=N.lines[i],count=nationalSegments[i].length;nc.innerHTML=`<div class="card-top"><span class="eyebrow">${escapeHTML(line.group.toUpperCase())} / STATIC RAIL</span><button class="card-close" data-close-aux aria-label="Close route details">${icon('close')}</button></div><h2>${escapeHTML(line.name)}</h2><div class="station-english">${escapeHTML(line.ko||'')}</div><p>${escapeHTML(line.city||'South Korea')} · ${escapeHTML(line.mode||'Passenger rail')}</p><p class="card-note">${count} mapped track segments from OpenStreetMap. This layer shows rail alignment, not live trains, timetables or a guarantee that every service stops here.</p>`;}
+    }
+    function createAuxUI(){
+      $('national-line-list').innerHTML=N.lines.map((line,i)=>`<button data-national-line="${i}"><i style="background:${escapeHTML(nationalColor(i))}"></i><span>${escapeHTML(line.name)}<small>${escapeHTML(line.city||line.group)} · ${escapeHTML(line.mode||line.group)}</small></span></button>`).join('')||'<p>National rail data unavailable.</p>';
+      $('kpop-list').innerHTML=P.sites.map(site=>`<button data-place="${escapeHTML(site.id)}"><i>✦</i><span>${escapeHTML(site.name)}<small>${escapeHTML(site.ko)}</small></span></button>`).join('');
+      $('national-line-list').onclick=e=>{const b=e.target.closest('[data-national-line]');if(b)focusNationalLine(+b.dataset.nationalLine);};
+      $('kpop-list').onclick=e=>{const b=e.target.closest('[data-place]');if(b)selectPlace(b.dataset.place);};
+      for(const b of document.querySelectorAll('[data-city]'))b.onclick=()=>focusCity(b.dataset.city);
+      $('kpop-focus').onclick=focusKpop;
+      $('national-urban-toggle').onchange=e=>{state.nationalUrban=e.target.checked;if(state.selectedNationalLine!==null&&!nationalVisible(state.selectedNationalLine))clearAux();updateEmptyState();dirty=true;};
+      $('national-intercity-toggle').onchange=e=>{state.nationalIntercity=e.target.checked;if(state.selectedNationalLine!==null&&!nationalVisible(state.selectedNationalLine))clearAux();updateEmptyState();dirty=true;};
+      $('kpop-toggle').onchange=e=>{state.kpop=e.target.checked;if(!state.kpop&&state.selectedPlace!==null)clearAux();updateEmptyState();dirty=true;};
+      for(const id of ['place-card','national-card'])$(id).onclick=e=>{if(e.target.closest('[data-close-aux]'))clearAux();};
+    }
     function startIntro(){
       goal.yaw=0;goal.pitch=Math.PI/2;goal.y=0;goal.spread=.12;
       fitCountryCamera(true);
@@ -385,11 +471,13 @@
       viewport.classList.toggle('country-scope',state.scope==='country');
       $('scope-country').classList.toggle('active',state.scope==='country');
       $('scope-full').classList.toggle('active',state.scope==='full');$('scope-core').classList.toggle('active',state.scope==='core');
-      let text=state.scope==='country'?'South Korea · Seoul in context':state.scope==='core'?'A closer look at the heart of Seoul':state.scope==='full'?'The full network, in perspective':'Explore Seoul at your own scale';
+      let text=state.scope==='country'?'South Korea · national rail context':state.scope==='core'?'A closer look at the heart of Seoul':state.scope==='full'?'The full Seoul network, in perspective':'Explore Korea at your own scale';
       if(state.scope==='custom'){
         if(state.selectedTrain!==null)text=D.lines[fleet.trains[state.selectedTrain].line].name+' · 3D rolling stock';
         else if(state.selectedStation!==null){const s=lookup.get(state.selectedStation);text=s.ko+' · '+s.en;}
         else if(state.selectedLine!==null)text=D.lines[state.selectedLine].name+' · '+D.lines[state.selectedLine].stations+' mapped stations';
+        else if(state.selectedNationalLine!==null)text=N.lines[state.selectedNationalLine].name+' · static rail geometry';
+        else if(state.selectedPlace!==null)text=P.sites.find(s=>s.id===state.selectedPlace)?.name+' · K-pop place';
       }
       $('map-subtitle').textContent=text;
     }
@@ -412,6 +500,91 @@
       const sizes=[.1,.2,.5,1,2,5,10,20,50];const km=sizes.reduce((best,n)=>Math.abs(n-goalKm)<Math.abs(best-goalKm)?n:best,1);
       $('scale-line').style.width=`${km/cam.scale*height}px`;$('scale-label').textContent=km<1?`${km*1000} m`:`${km} km`;
     }
+    function drawNationalStops(){
+      nationalHits=[];
+      if(cam.scale>105)return;
+      const named=[];
+      for(const s of N.stations){
+        const li=s.lines.find(nationalVisible);if(li===undefined)continue;
+        const p=project(s.x,.10,s.z);
+        if(p.x<10||p.x>width-10||p.y<105||p.y>height-65)continue;
+        const radius=cam.scale<12?2.8:cam.scale<45?1.8:1.4;
+        ctx.beginPath();ctx.arc(p.x,p.y,radius+1,0,Math.PI*2);ctx.fillStyle=mapTheme.background;ctx.fill();
+        ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=nationalColor(li);ctx.fill();
+        nationalHits.push({s,li,x:p.x,y:p.y});
+        if(cam.scale<16&&named.length<90)named.push({s,p});
+      }
+      if(state.labels&&named.length){
+        ctx.font='600 9px "Segoe UI",Arial,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
+        const boxes=[];
+        for(const {s,p} of named.sort((a,b)=>b.s.lines.length-a.s.lines.length)){
+          const name=s.ko||s.en;if(!name)continue;
+          const w=ctx.measureText(name).width+5,box={x:p.x+5,y:p.y-5,w,h:11};
+          if(box.x+box.w>width-75||boxes.some(other=>box.x<other.x+other.w+4&&box.x+box.w>other.x-4&&box.y<other.y+other.h+3&&box.y+box.h>other.y-3))continue;
+          boxes.push(box);ctx.lineWidth=2.5;ctx.strokeStyle=mapTheme.background;ctx.strokeText(name,box.x,p.y);ctx.fillStyle=mapTheme.majorLabel;ctx.fillText(name,box.x,p.y);
+          if(boxes.length>=35)break;
+        }
+      }
+    }
+    function drawKpopModels(){
+      kpopHits=[];
+      if(!state.kpop||!P.sites.length)return;
+      const drawFace=(vertices,fill,stroke)=>{
+        ctx.beginPath();vertices.forEach((v,i)=>{const p=project(...v);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);});
+        ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=.8;ctx.stroke();}
+      };
+      if(cam.scale>70){
+        const p=project((126.98-126.98)*88.28,.3,(37.53-37.56)*111.32);
+        if(p.x>15&&p.x<width-15&&p.y>105&&p.y<height-45){
+          const markerX=p.x+20,markerY=p.y-18;
+          ctx.save();ctx.translate(markerX,markerY);ctx.fillStyle='#c45b9b';ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(11,0);ctx.lineTo(0,13);ctx.lineTo(-11,0);ctx.closePath();ctx.fill();ctx.stroke();
+          ctx.fillStyle='#ffffff';ctx.font='700 11px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('K',0,1);ctx.restore();
+          kpopHits.push({site:null,x:markerX,y:markerY,r:16});
+        }
+        return;
+      }
+      const size=clamp(cam.scale/height*23,.025,.65),rise=size*1.65;
+      const modelLabels=[],labelBoxes=[];
+      const shortNames={hybe:'HYBE',sm:'SM',jyp:'JYP',yg:'YG',k_star_road:'K-Star Road',coex_kpop_square:'COEX K-POP',hongdae_kpop_square:'K-Pop Square',hikr_ground:'HiKR Ground',kbs_hall:'KBS Hall',cj_enm:'CJ ENM',mbc_media:'MBC'};
+      for(const site of P.sites){
+        const p=project(site.x,.1,site.z);
+        if(p.x<-35||p.x>width+35||p.y<85||p.y>height+30)continue;
+        const profile={hybe:[.75,.70,1.36,'#bb598e'],sm:[.83,.56,1.10,'#a05cbb'],jyp:[.70,.76,1.22,'#ce6f8d'],yg:[1.05,.67,.82,'#aa69a6'],cj_enm:[.80,.72,1.18,'#786dc0'],mbc_media:[.76,.70,1.28,'#686db9']}[site.id];
+        const x=site.x,z=site.z,w=size*(profile?.[0]??(site.shape==='facade'?1.25:.75)),d=size*(profile?.[1]??(site.shape==='facade'?.38:.72)),h=rise*(profile?.[2]??(site.shape==='dome'?.52:site.shape==='landmark'?.72:1));
+        const base=.12,accent=profile?.[3]??(site.category==='agency'?'#c05a9b':site.category==='broadcast'?'#7b69c5':'#e09349');
+        // Original schematic solids; footprints, heights, signs and windows are illustrative.
+        const A=[x-w,base,z-d],B=[x+w,base,z-d],C=[x+w,base,z+d],E=[x-w,base,z+d];
+        const a=[x-w,base+h,z-d],b=[x+w,base+h,z-d],c=[x+w,base+h,z+d],e=[x-w,base+h,z+d];
+        drawFace([A,B,b,a],'#743e71','#f6d3ed');
+        drawFace([B,C,c,b],'#9a497e','#f6d3ed');
+        drawFace([C,E,e,c],accent,'#f6d3ed');
+        drawFace([E,A,a,e],'#a95a94','#f6d3ed');
+        drawFace([a,b,c,e],site.shape==='dome'?'#f5b882':'#e9a8cf','#fff4fb');
+        if(site.shape==='dome'){
+          drawFace([[x-w*.8,base+h,z-d*.8],[x,base+h+rise*.48,z],[x+w*.8,base+h,z-d*.8]],'#e4a063','#fff4ec');
+          drawFace([[x+w*.8,base+h,z-d*.8],[x,base+h+rise*.48,z],[x+w*.8,base+h,z+d*.8]],'#c77e63','#fff4ec');
+        }else if(site.shape==='landmark'){
+          drawFace([[x-w*.6,base+h,z],[x,base+h+rise*.62,z],[x+w*.6,base+h,z]],'#ffe0a0','#fff4d0');
+        }else{
+          const q=project(x,base+h*.57,z+d+.001),q2=project(x,base+h*.20,z+d+.001);
+          ctx.strokeStyle='#fff4fa';ctx.lineWidth=site.shape==='facade'?3:1.4;ctx.beginPath();ctx.moveTo(q.x-4,q.y);ctx.lineTo(q.x+4,q.y);ctx.moveTo(q2.x-4,q2.y);ctx.lineTo(q2.x+4,q2.y);ctx.stroke();
+        }
+        const pin=project(x,base+h+(site.shape==='dome'?rise*.48:0),z);
+        ctx.beginPath();ctx.arc(pin.x,pin.y,2.4,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
+        kpopHits.push({site,x:p.x,y:pin.y,r:Math.max(15,24-cam.scale*.08)});
+        if(state.selectedPlace===site.id||cam.scale<25)modelLabels.push({site,x:pin.x,y:pin.y-8});
+      }
+      ctx.font='700 10px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
+      for(const label of modelLabels.sort((a,b)=>Number(b.site.id===state.selectedPlace)-Number(a.site.id===state.selectedPlace))){
+        const name=shortNames[label.site.id]||label.site.name,w=ctx.measureText(name).width+6;
+        const box={x:label.x-w/2,y:label.y-12,w,h:13};
+        if(box.x<5||box.x+box.w>width-5||box.y<105||box.y>height-90)continue;
+        if(label.site.id!==state.selectedPlace&&labelBoxes.some(b=>box.x<b.x+b.w+4&&box.x+box.w>b.x-4&&box.y<b.y+b.h+2&&box.y+box.h>b.y-2))continue;
+        labelBoxes.push(box);ctx.lineWidth=3;ctx.strokeStyle=mapTheme.background;ctx.strokeText(name,label.x,label.y);
+        ctx.fillStyle=mapTheme.selectedLabel;ctx.fillText(name,label.x,label.y);
+      }
+    }
     function drawLabels(time){
       ctx.clearRect(0,0,width,height);
       const selected=focusedStation();
@@ -420,7 +593,7 @@
         const h=trainHits.find(h=>h.train.id===state.selectedTrain);
         if(h){ctx.font='600 10px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.fillStyle=mapTheme.selectedLabel;ctx.fillText('3D TRAIN / '+h.train.number,h.center.x,h.center.y-27);}
       }
-      if(!state.labels)return;
+      if(!state.labels){drawNationalStops();drawKpopModels();return;}
       if(cam.scale>350){
         const cities=width<600?[
           ['SEOUL',126.978,37.5665],['BUSAN',129.0756,35.1796],['JEJU',126.5312,33.4996]
@@ -437,11 +610,11 @@
           ctx.lineWidth=3;ctx.strokeStyle=mapTheme.land;ctx.strokeText(name,p.x+8,p.y);
           ctx.fillStyle=mapTheme.majorLabel;ctx.fillText(name,p.x+8,p.y);
         }
-        return;
+        drawKpopModels();return;
       }
       const boxes=[],labels=[];
       const reserved=[{x:0,y:0,w:width,h:103},{x:width-72,y:100,w:72,h:325},{x:width/2-170,y:height-112,w:340,h:112}];
-      for(const id of ['station-card','line-card','train-card']){const card=$(id);if(!card.hidden){const r=card.getBoundingClientRect(),v=viewport.getBoundingClientRect();reserved.push({x:r.left-v.left,y:r.top-v.top,w:r.width,h:r.height});}}
+      for(const id of ['station-card','line-card','train-card','place-card','national-card']){const card=$(id);if(!card.hidden){const r=card.getBoundingClientRect(),v=viewport.getBoundingClientRect();reserved.push({x:r.left-v.left,y:r.top-v.top,w:r.width,h:r.height});}}
       if(!selected&&state.selectedLine===null){
         const places=[['SEOUL',126.98,37.569],['INCHEON',126.626,37.469],['SUWON',127.019,37.261],['CHUNCHEON',127.716,37.902]];
         ctx.textAlign='center';ctx.font='500 11px "Segoe UI", Arial, sans-serif';ctx.fillStyle=mapTheme.cityLabel;
@@ -468,6 +641,7 @@
         if(!box)continue;boxes.push(box);labels.push({text,x:box.x+3,y:p.y,selected:s===selected,major:majorNames.includes(s.ko)});
       }
       for(const l of labels){ctx.lineWidth=3.6;ctx.strokeStyle=mapTheme.background;ctx.strokeText(l.text,l.x,l.y);ctx.fillStyle=l.selected?mapTheme.selectedLabel:l.major?mapTheme.majorLabel:mapTheme.label;ctx.fillText(l.text,l.x,l.y);}
+      drawNationalStops();drawKpopModels();
     }
     function frame(time){
       const frameDt=(time-lastFrame)/1000||.016,dt=Math.min(frameDt,.05);lastFrame=time;
@@ -519,18 +693,19 @@
       if(state.selectedTrain!==null&&!state.visible[fleet.trains[state.selectedTrain].line])resetTrain();
       if(state.selectedLine!==null&&!state.visible[state.selectedLine])state.selectedLine=null;
       if(focusedStation()&&!activeLines(focusedStation()).length)state.selectedStation=null;
-      updateLineUI();updateCards();$('empty-state').hidden=state.visible.some(Boolean);dirty=true;
+      updateLineUI();updateCards();updateEmptyState();dirty=true;
       const feeds=D.lines.filter((_,i)=>state.visible[i]).map(l=>l.id).join(',');if(feeds!==visibleFeeds){visibleFeeds=feeds;live.selectionChanged();}
     }
-    function showAll(){resetTrain();state.visible.fill(true);state.selectedLine=null;state.selectedStation=null;updateVisibility();}
-    function clearSelection(){cancelIntro();resetTrain();state.selectedLine=null;state.selectedStation=null;updateLineUI();updateCards();dirty=true;}
+    function showAll(){resetTrain();clearAux();state.visible.fill(true);state.selectedLine=null;state.selectedStation=null;updateVisibility();}
+    function clearSelection(){cancelIntro();resetTrain();clearAux();state.selectedLine=null;state.selectedStation=null;updateLineUI();updateCards();dirty=true;}
     function closeMobile(){ $('sidebar').classList.remove('open');$('mobile-menu').setAttribute('aria-expanded','false'); }
     function focusLine(i){
-      resetTrain();state.visible[i]=true;state.selectedLine=i;state.selectedStation=null;state.scope='custom';updateScope();updateVisibility();fitStations(D.stations.filter(s=>s.lines.includes(i)));closeMobile();
+      resetTrain();clearAux();state.visible[i]=true;state.selectedLine=i;state.selectedStation=null;state.scope='custom';updateScope();updateVisibility();fitStations(D.stations.filter(s=>s.lines.includes(i)));closeMobile();
       $('map-subtitle').textContent=`${D.lines[i].name} · ${D.lines[i].stations} mapped stations`;
     }
     function selectStation(id){
       cancelIntro();releaseZoomAnchor();const s=lookup.get(id);if(!s)return;resetTrain();
+      clearAux();
       state.selectedStation=id;state.selectedLine=null;s.lines.forEach(i=>state.visible[i]=true);state.scope='custom';updateScope();updateVisibility();
       goal.x=s.x;goal.z=s.z;goal.y=stationHeight(s);goal.scale=Math.min(goal.scale,width<600?15:17);
       // Place a selected mobile station below its inspector, not behind the card.
@@ -579,7 +754,7 @@
     function pointerCenter(){const p=[...pointers.values()];return{x:p.reduce((v,k)=>v+k.x,0)/p.length,y:p.reduce((v,k)=>v+k.y,0)/p.length};}
     function pan(dx,dy,instant=true){
       releaseZoomAnchor();stopAutomaticCamera();const units=goal.scale/height,cy=Math.cos(goal.yaw),sy=Math.sin(goal.yaw),sp=Math.max(.0001,Math.sin(goal.pitch));
-      goal.x-=dx*units*cy;goal.z+=dx*units*sy;goal.x-=dy*units*sy/sp;goal.z-=dy*units*cy/sp;goal.x=clamp(goal.x,-160,160);goal.z=clamp(goal.z,-160,160);
+      goal.x-=dx*units*cy;goal.z+=dx*units*sy;goal.x-=dy*units*sy/sp;goal.z-=dy*units*cy/sp;goal.x=clamp(goal.x,-350,350);goal.z=clamp(goal.z,-550,550);
       if(instant){cam.x=goal.x;cam.z=goal.z;}
       state.scope='custom';updateScope();dirty=true;
     }
@@ -620,6 +795,10 @@
         const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
         const train=hitTrain(x,y);
         if(train){hover={train};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=`3D train · ${escapeHTML(D.lines[train.line].name)}<small>Click to inspect report & follow</small>`;tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
+        const kpop=kpopHits.find(h=>Math.hypot(h.x-x,h.y-y)<h.r);
+        if(kpop){hover={kpop};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=kpop.site?`${escapeHTML(kpop.site.name)}<small>K-pop place · select to inspect</small>`:'K-pop places<small>Click to explore Seoul landmarks</small>';tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
+        const national=nationalHits.find(h=>Math.hypot(h.x-x,h.y-y)<7);
+        if(national){hover={national};canvas.style.cursor='pointer';const tip=$('hover-tip');tip.hidden=false;tip.innerHTML=`${escapeHTML(national.s.ko||national.s.en||'Rail stop')}<small>${escapeHTML(N.lines[national.li].name)} · static map</small>`;tip.style.left=`${clamp(x+14,8,width-tip.offsetWidth-8)}px`;tip.style.top=`${clamp(y-45,8,height-tip.offsetHeight-8)}px`;return;}
         let nearest=null,best=90;
         for(const p of projected){if(p.alpha<.5)continue;const d=(p.x-x)**2+(p.y-y)**2;if(d<best){best=d;nearest=p;}}
         hover=nearest;canvas.style.cursor=nearest?'pointer':'grab';const tip=$('hover-tip');tip.hidden=!nearest;
@@ -629,7 +808,7 @@
     function endPointer(e){
       const wasTwo=pointers.size>1;pointers.delete(e.pointerId);
       if(!pointers.size){moving=false;canvas.style.cursor='grab';
-        if(!dragged&&!wasTwo&&e.type==='pointerup'&&e.button===0){const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const train=hitTrain(x,y);if(train){selectTrain(train.id);return;}let nearest=null,best=115;for(const p of projected){if(p.alpha<.5)continue;const d=(p.x-x)**2+(p.y-y)**2;if(d<best){nearest=p;best=d;}}if(nearest)selectStation(nearest.s.id);}
+        if(!dragged&&!wasTwo&&e.type==='pointerup'&&e.button===0){const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;const train=hitTrain(x,y);if(train){selectTrain(train.id);return;}const kpop=kpopHits.find(h=>Math.hypot(h.x-x,h.y-y)<h.r);if(kpop){if(kpop.site)selectPlace(kpop.site.id);else focusKpop();return;}const national=nationalHits.find(h=>Math.hypot(h.x-x,h.y-y)<7);if(national){focusNationalLine(national.li);return;}let nearest=null,best=115;for(const p of projected){if(p.alpha<.5)continue;const d=(p.x-x)**2+(p.y-y)**2;if(d<best){nearest=p;best=d;}}if(nearest)selectStation(nearest.s.id);}
       }else{
         goal.x=cam.x;goal.y=cam.y;goal.z=cam.z;goal.scale=cam.scale;goal.yaw=cam.yaw;goal.pitch=cam.pitch;releaseZoomAnchor();stopAutomaticCamera();
         gesture.center=pointerCenter();gesture.distance=pointerDistance();gesture.anchor=null;dragged=true;
@@ -698,9 +877,10 @@
     const dialog=$('about-dialog');for(const id of ['nav-about','small-about','map-about','help'])$(id).onclick=()=>dialog.showModal();$('close-about').onclick=()=>dialog.close();dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});
     function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);}
     $('export-data').onclick=()=>{download(new Blob([JSON.stringify(D,null,2)],{type:'application/json'}),'seoul-network-2026-08-24.json');toast('Network data exported with source metadata');};
+    $('export-national-data').onclick=()=>{download(new Blob([JSON.stringify(N,null,2)],{type:'application/json'}),'korea-passenger-rail.json');toast('National rail geometry exported with source metadata');};
     $('export').onclick=()=>{
       try{
-        render();const image=document.createElement('canvas');image.width=canvas.width;image.height=canvas.height+Math.round(76*dpr);const c=image.getContext('2d');c.fillStyle=mapTheme.background;c.fillRect(0,0,image.width,image.height);c.drawImage(canvas,0,0);c.drawImage(overlay,0,0);c.scale(dpr,dpr);c.fillStyle=mapTheme.accent;c.font='600 13px "Segoe UI",sans-serif';c.fillText('SEOUL / SUBSURFACE',24,height+29);c.fillStyle=mapTheme.exportText;c.font='10px "Segoe UI",sans-serif';c.fillText(`${state.visible.filter(Boolean).length} lines · map snapshot 24 Aug 2026 · ${$('live-badge-label').textContent} · ${$('live-age').textContent}`,24,height+50);c.textAlign='right';c.font='9px "Segoe UI",sans-serif';c.fillText('© OpenStreetMap contributors / ODbL · Live reports: Seoul TOPIS',width-22,height+29);image.toBlob(b=>{if(b){download(b,'seoul-subsurface.png');toast('Map image exported');}else toast('The browser could not export this image.');},'image/png');
+        render();const image=document.createElement('canvas');image.width=canvas.width;image.height=canvas.height+Math.round(76*dpr);const c=image.getContext('2d');c.fillStyle=mapTheme.background;c.fillRect(0,0,image.width,image.height);c.drawImage(canvas,0,0);c.drawImage(overlay,0,0);c.scale(dpr,dpr);c.fillStyle=mapTheme.accent;c.font='600 13px "Segoe UI",sans-serif';c.fillText('SEOUL / SUBSURFACE',24,height+29);c.fillStyle=mapTheme.exportText;c.font='10px "Segoe UI",sans-serif';c.fillText(`${state.visible.filter(Boolean).length} Seoul lines · static Korea rail · Seoul snapshot 24 Aug 2026 · ${$('live-badge-label').textContent}`,24,height+50);c.textAlign='right';c.font='9px "Segoe UI",sans-serif';c.fillText('© OpenStreetMap contributors / ODbL · Live reports: Seoul TOPIS',width-22,height+29);image.toBlob(b=>{if(b){download(b,'seoul-subsurface.png');toast('Map image exported');}else toast('The browser could not export this image.');},'image/png');
       }catch(err){toast('Image export failed. Please try a browser screenshot.');console.error(err);}
     };
     document.addEventListener('keydown',e=>{
@@ -726,7 +906,7 @@
     });
     viewport.addEventListener('pointerdown',cancelIntro,true);
     viewport.addEventListener('wheel',cancelIntro,{capture:true,passive:true});
-    createLineUI();new ResizeObserver(resize).observe(viewport);resize();startIntro();render();lastFrame=performance.now();requestAnimationFrame(frame);
+    createLineUI();createAuxUI();new ResizeObserver(resize).observe(viewport);resize();startIntro();render();lastFrame=performance.now();requestAnimationFrame(frame);
     $('loading').classList.add('dismissed');setTimeout(()=>$('loading').hidden=true,550);
     // Exposes a small read/debug surface for reproducible automated smoke tests.
     function applyLive(payload){
@@ -737,6 +917,6 @@
     }
     live.connect({getLineIds:()=>D.lines.filter((_,i)=>state.visible[i]).map(l=>l.id),getMotionEnabled:()=>state.motion,onUpdate:applyLive,onTick:()=>{if(state.selectedTrain!==null&&live.quality(fleet.trains[state.selectedTrain])==='expired')resetTrain();updateTrainCard();dirty=true;}});
     $('retry-render').onclick=()=>location.reload();
-    window.__SEOUL_APP__={theme:window.SeoulTheme,live,applyLive,pan,renderer:gl?'webgl':'software-3d',data:D,korea:K,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,fitAll,country,render,project,getProjected:()=>projected,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
+    window.__SEOUL_APP__={theme:window.SeoulTheme,live,applyLive,pan,renderer:gl?'webgl':'software-3d',data:D,korea:K,national:N,kpop:P,state,cam,goal,getIntro:()=>intro,selectStation,focusLine,focusCity,focusNationalLine,focusKpop,selectPlace,fitAll,country,render,project,getProjected:()=>projected,getKpopHits:()=>kpopHits,getNationalHits:()=>nationalHits,showAll,core,clearSelection,selectTrain,inspectTrain,setMotion,fleet,getTrainInstances:()=>trainInstances,getTrainHits:()=>trainHits,getTrainClock:()=>trainClock,setTrainClock:t=>{trainClock=Math.max(0,Number(t)||0);dirty=true;},trainModels:T.models,zoomAt,pointUnderCursor,releaseZoomAnchor,getZoomAnchor:()=>zoomAnchor,zoomLimits:{min:MIN_SCALE,max:MAX_SCALE}};
   }
 })();

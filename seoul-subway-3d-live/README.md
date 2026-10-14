@@ -1,7 +1,8 @@
 # Seoul Subsurface — live-report edition with dark mode
 
 A three-dimensional atlas of the Seoul metropolitan subway with a full South Korea
-land backdrop, a Seoul Metro–inspired blue-and-white / navy-dark interface, source route
+land backdrop, separate static national passenger-rail and Seoul K-pop place layers,
+a Seoul Metro–inspired blue-and-white / navy-dark interface, source route
 colors, pan-first navigation, and an official TOPIS train-position connector. No third-party JavaScript, CDN assets, accounts in the
 app, analytics, npm packages, or downloaded train models.
 
@@ -32,7 +33,7 @@ browser; the local-server version provides a normal, stable site origin.
 to a new folder, copy your existing **`.env`** into that folder, and run
 **`start-windows.bat`** (or `python server.py --open`). Do not overwrite your saved key
 with `.env.example`. Refresh the browser after restarting. No new API key is needed.
-The `src/theme.js` and `data/korea.js` assets are on the server's explicit allowlist; use the new
+The `src/theme.js`, `data/korea.js`, `data/national-rail.js`, and `data/kpop.js` assets are on the server's explicit allowlist; use the new
 `server.py` as well as the updated frontend. Script CSP restrictions are unchanged.
 
 ## Start on Windows
@@ -105,6 +106,16 @@ per-client limits, and a shared server-side feed cache.
   view; **Network** fits the rail network, and **Seoul** focuses on the center.
   Moving the map interrupts the introduction. Reduced-motion settings skip it.
   The geographic land layer includes Jeju and smaller islands; no grid is drawn.
+- **Around Korea** in the sidebar toggles static regional metro/light rail, intercity
+  passenger-rail corridors, and a curated Seoul K-pop place layer. City buttons focus
+  Busan, Daegu, Daejeon, or Gwangju. Open the route and place lists to choose a
+  specific item. Click a K-pop model for visitor notes and an official source link.
+  Models are original schematic illustrations, not architectural replicas. The
+  national layer shows physical track once even where KTX, SRT, ITX and conventional
+  services overlap; it has no live train positions or timetable data. Its dated
+  OpenStreetMap derivative contains 12 urban routes outside the Seoul layer and
+  21 named intercity corridors. It is not an exhaustive service or stop map; see
+  `LICENSE-DATA.md` for the omitted short and unverified passenger lines.
 - **Left-drag / one-finger drag:** pan in the direction of your drag. The map's angle does
   not change. **Arrow keys** and the on-map **Move** arrows pan the view in four
   directions, including on touch screens. Hold a Move arrow to keep panning.

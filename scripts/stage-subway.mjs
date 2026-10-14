@@ -17,6 +17,8 @@ const files = [
   'src/app.js',
   'data/network.js',
   'data/korea.js',
+  'data/national-rail.js',
+  'data/kpop.js',
   'LICENSE',
   'LICENSE-DATA.md',
 ];

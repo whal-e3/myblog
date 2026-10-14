@@ -55,6 +55,57 @@ concave polygons for the 3D renderer. The shape is a geographic backdrop, not
 terrain height or a precise administrative survey. Natural Earth data is
 **public domain**: https://www.naturalearthdata.com/about/terms-of-use/
 
+## Additional South Korea rail layer
+
+`data/national-rail.json`, `data/national-rail.js`, and the corresponding
+standalone map layer are derived from © OpenStreetMap contributors and offered
+under the **Open Data Commons ODbL 1.0**. Source: the dated Geofabrik South Korea
+extract `south-korea-261013.osm.pbf` (2026-10-13), MD5
+`08b0d3fd8b2fe3ee8e18be02522c88e6`:
+https://download.geofabrik.de/asia/south-korea-261013.osm.pbf
+
+`tools/prepare_national_rail.py` rebuilds this derivative from the dated
+extract using PyOsmium 4.3.1. The source PBF is not committed because it is about
+289 MB. The derivative keeps only active tagged track ways associated with
+selected route relations, joins ways at shared OSM nodes, simplifies geometry
+by up to 35 m for urban services or 110 m for national corridors, collapses
+parallel mapped tracks onto a representative trace where they substantially
+overlap, then rounds projected coordinates to 10 m. It uses the same local x/z kilometre projection
+as `network.js`. Urban station labels come from relation stop nodes; intercity
+station labels are OSM train-station nodes within 1 km of a selected corridor.
+Dedicated high-speed tracks also use a curated station-name allowlist to avoid
+mislabeling nearby metro stations. These are approximate map associations, not
+proof of a particular service stopping there.
+
+The layer covers the operating Busan, Daegu, Daejeon, and Gwangju urban
+systems and selected named national passenger corridors, including dedicated
+high-speed infrastructure. Operator maps and announcements were checked only
+to establish that lines are operating; their map artwork is not copied:
+
+* Busan Transportation Corporation: https://www2.humetro.busan.kr/homepage/cyberstation/mapeng.do
+* Daejeon Transportation Corporation: https://www.djtc.kr/kor/page.do?menuIdx=39
+* Gwangju Transportation Corporation: https://www.grtc.co.kr/cybereng/simple
+* Daegu Metropolitan Government metro information: https://car.daegu.go.kr/metro/subway
+* KORAIL rail map: https://info.korail.com/info/contents.do?key=857
+* KORAIL announcement for Mokpo–Boseong passenger trains: https://info.korail.com/info/selectBbsNttView.do?bbsNo=199&integrDeptCode=&key=911&nttNo=25499
+* KORAIL announcement for Gyooe Line passenger service: https://info.korail.com/info/selectBbsNttView.do?bbsNo=199&integrDeptCode=&key=911&nttNo=24027
+* KORAIL announcement for resumed Jeongseon tourist trains: https://info.korail.com/info/selectBbsNttView.do?bbsNo=199&integrDeptCode=&key=911&nttNo=26733
+
+This is **not an exhaustive service map** or a timetable. Named intercity
+lines indicate physical rail corridors, not individual KTX, SRT, ITX or
+Mugunghwa routings. The Seoul metropolitan network is kept in `network.js`;
+freight-only spurs, depots, and most short connecting tracks are omitted.
+The Gwangju Line, Samcheok Line, and Jinhae Line are omitted pending clear
+passenger-service verification for their mapped sections. Unfinished or planned
+lines, including Bujeon–Masan, Yangsan, Daegu 4, Daejeon 2, and Gwangju 2,
+are not shown. OSM geometry and station tagging can be incomplete or stale.
+No position API or live train coverage is implied for these additional routes.
+
+To reproduce the generated files, install `osmium==4.3.1`, download the dated
+PBF above, and run `python3 tools/prepare_national_rail.py --pbf <PBF path>`
+from this project directory. The script verifies Geofabrik's PBF checksum
+before writing the JSON and JavaScript files.
+
 ## Station metadata
 
 The upstream source also credits Wikidata, CC0.
@@ -62,6 +113,18 @@ https://www.wikidata.org/
 https://creativecommons.org/publicdomain/zero/1.0/
 
 Opening dates in the original network are not displayed as current service claims.
+
+## Seoul K-pop landmark markers
+
+`data/kpop.js` is an editorial selection of public-facing Seoul locations,
+checked 2026-10-14 against the official company, Seoul Tourism Organization,
+Gangnam tourism, or Korea Tourism Organization pages linked on each record.
+Markers are approximate POI/building centers, not surveyed building footprints.
+Their coordinates are from © OpenStreetMap contributors and remain subject to
+the ODbL attribution and reuse terms above; each record links its OSM feature.
+The procedural 3D representations are schematic original art, without venue
+logos or licensed building models. Office buildings are identified for exterior
+viewing only, and program access is not implied.
 
 ## Transformations
 

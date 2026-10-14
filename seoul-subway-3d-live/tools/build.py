@@ -16,6 +16,10 @@ def build(destination: Path) -> Path:
             '<script>\n' + (root / 'data/network.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="data/korea.js"></script>':
             '<script>\n' + (root / 'data/korea.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
+        '<script src="data/national-rail.js"></script>':
+            '<script>\n' + (root / 'data/national-rail.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
+        '<script src="data/kpop.js"></script>':
+            '<script>\n' + (root / 'data/kpop.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/trains.js"></script>':
             '<script>\n' + (root / 'src/trains.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/live.js"></script>':

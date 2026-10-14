@@ -207,4 +207,48 @@ html[data-theme="dark"] .pan-control button:hover,html[data-theme="dark"] .pan-c
 @media(max-width:780px){
   .station-card,.line-card,.train-card{right:105px;width:calc(100% - 128px)}
 }
+
+/* National rail and Seoul K-pop places remain independent of the live Seoul feed. */
+.sidebar{overflow-y:auto;scrollbar-width:thin}
+.line-list{flex:1 0 115px;min-height:115px}
+.national-panel{flex:0 0 auto;padding:10px 18px;border-top:1px solid var(--line);background:var(--panel)}
+.national-panel>summary{display:flex;justify-content:space-between;align-items:center;list-style:none;cursor:pointer;margin:0 3px;font-size:9px;font-weight:700;letter-spacing:1.5px;color:var(--text)}
+.national-panel>summary::-webkit-details-marker{display:none}
+.national-panel>summary:before{content:'▸';font-size:11px;color:var(--accent);margin-right:6px}
+.national-panel[open]>summary:before{content:'▾'}
+.national-panel>summary span{margin-left:auto;font-size:7px;letter-spacing:.8px;color:var(--muted);font-weight:500}
+.national-panel-content{padding-top:8px}
+.national-panel-content>label{display:flex;align-items:center;gap:8px;margin:7px 3px;font-size:10px;color:var(--text);cursor:pointer}
+.national-panel-content>label input{accent-color:#0052a4;width:13px;height:13px;margin:0}
+.layer-swatch{display:inline-block;width:15px;height:3px;border-radius:4px;background:#4980ac;flex:none}
+.layer-swatch.intercity{background:#a17ca5}.layer-swatch.kpop{background:#c45b9b;height:9px;width:9px;transform:rotate(45deg);margin:0 3px}
+.regional-focus{display:flex;flex-wrap:wrap;gap:5px;margin:12px 0 8px}
+.regional-focus button{font-size:9px;padding:5px 7px;border:1px solid var(--line);border-radius:4px;background:var(--card,#fff);color:var(--text)}
+.regional-focus button:hover,.national-line-list button:hover,.kpop-list button:hover{background:var(--hover,#e9f2fc)}
+.national-panel details{margin-top:5px;border-top:1px solid var(--line);padding-top:6px}
+.dialog-actions{flex-wrap:wrap}
+.national-panel summary{font-size:9px;color:var(--accent);cursor:pointer;line-height:1.5}
+.national-panel-content>p{font-size:8px;line-height:1.5;color:var(--muted);margin-top:9px}
+.national-line-list,.kpop-list{max-height:210px;overflow-y:auto;margin-top:6px;scrollbar-width:thin}
+.national-line-list button,.kpop-list button{display:flex;align-items:center;gap:9px;width:100%;padding:7px 5px;border-radius:4px;text-align:left;font-size:10px;line-height:1.25}
+.national-line-list button>i{width:12px;height:3px;border-radius:2px;flex:none}
+.kpop-list button>i{font-size:14px;color:#c45b9b;font-style:normal;width:12px;flex:none}
+.national-line-list small,.kpop-list small{display:block;font-size:8px;color:var(--muted);margin-top:2px}
+.national-legend-line{display:block;width:10px;height:2px;margin:0 1px;background:#7d6d9e}
+.kpop-legend-dot{display:block;width:8px;height:8px;margin:0 2px;background:#c45b9b;transform:rotate(45deg)}
+@media(min-width:781px){.viewport:not(.country-scope):has(.live-notice:not([hidden])) .map-legend{bottom:280px}}
+.place-card,.national-card{position:absolute;top:93px;right:122px;width:285px;max-height:calc(100% - 185px);overflow-y:auto;border:1px solid #c7dced;border-radius:10px;background:#fffffff5;backdrop-filter:blur(14px);box-shadow:0 16px 45px #183e6a16;z-index:8;padding:19px}
+.place-card h2,.national-card h2{font-size:19px;line-height:1.22;color:#143c66;font-weight:550}
+.place-card .station-english,.national-card .station-english{font-size:11px;color:var(--muted);margin:6px 0 12px}
+.place-card p,.national-card p{font-size:10px;line-height:1.6;color:var(--muted);margin-top:9px}
+.place-card .place-visit{color:var(--text);font-weight:550}
+.place-card .station-coordinates{font-size:9px;line-height:1.6;color:var(--muted);padding-top:11px;margin-top:11px;border-top:1px solid var(--line)}
+.place-card a{display:block;font-size:10px;color:var(--accent);margin-top:13px}
+html[data-theme="dark"] .national-panel{background:var(--panel)}
+html[data-theme="dark"] .regional-focus button{background:var(--surface);border-color:var(--line)}
+html[data-theme="dark"] :is(.place-card,.national-card){background:var(--card);border-color:#35516d;box-shadow:var(--shadow)}
+html[data-theme="dark"] :is(.place-card h2,.national-card h2){color:var(--text)}
+@media(max-width:1180px){.place-card,.national-card{right:110px}}
+@media(max-width:780px){.place-card,.national-card{top:120px;right:105px;width:calc(100% - 128px);max-height:calc(100% - 230px);padding:14px}.map-legend{bottom:63px;gap:4px}.map-legend>span{font-size:7px}}
+@media(max-height:630px){.place-card,.national-card{top:72px;max-height:calc(100% - 175px)}}
 @media(max-width:780px) and (max-height:630px){.view-tools{top:72px}}
