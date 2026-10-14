@@ -14,6 +14,7 @@ const files = [
   'src/theme.js',
   'src/trains.js',
   'src/live.js',
+  'src/kpop-models.js',
   'src/app.js',
   'data/network.js',
   'data/korea.js',

@@ -33,7 +33,7 @@ browser; the local-server version provides a normal, stable site origin.
 to a new folder, copy your existing **`.env`** into that folder, and run
 **`start-windows.bat`** (or `python server.py --open`). Do not overwrite your saved key
 with `.env.example`. Refresh the browser after restarting. No new API key is needed.
-The `src/theme.js`, `data/korea.js`, `data/national-rail.js`, and `data/kpop.js` assets are on the server's explicit allowlist; use the new
+The `src/theme.js`, `src/kpop-models.js`, `data/korea.js`, `data/national-rail.js`, and `data/kpop.js` assets are on the server's explicit allowlist; use the new
 `server.py` as well as the updated frontend. Script CSP restrictions are unchanged.
 
 ## Start on Windows
@@ -109,7 +109,9 @@ per-client limits, and a shared server-side feed cache.
 - **Around Korea** in the sidebar toggles static regional metro/light rail, intercity
   passenger-rail corridors, and a curated Seoul K-pop place layer. City buttons focus
   Busan, Daegu, Daejeon, or Gwangju. Open the route and place lists to choose a
-  specific item. Click a K-pop model for visitor notes and an official source link.
+  specific item. Click a K-pop marker to zoom into its exterior-inspired sketch
+  and read visitor notes. See [model references](MODEL-REFERENCES.md) for the
+  exterior sources and NAVER Map visual benchmark.
   Models are original schematic illustrations, not architectural replicas. The
   national layer shows physical track once even where KTX, SRT, ITX and conventional
   services overlap; it has no live train positions or timetable data. Its dated
@@ -287,7 +289,8 @@ cache, quota and sanitized failures. `server.py` handles same-origin HTTP and as
 whitelisting. `src/live.js` handles station matching, persistent train identity, freshness,
 bounded visual motion, polling and connection UI. `src/trains.js` supplies the
 original triangle meshes, instanced WebGL rendering and software fallback. `src/app.js`
-contains map projection, navigation and scene interaction; `src/styles.css` contains the
+contains map projection, navigation and scene interaction; `src/kpop-models.js` draws
+exterior-inspired landmark sketches with zoom-based detail; `src/styles.css` contains the
 Metro-inspired palette and responsive layout.
 
 ```sh

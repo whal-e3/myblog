@@ -27,7 +27,7 @@
   let toastTimer;
   function toast(message) { $('toast').textContent=message; $('toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('visible'),2600); }
   function fatal(err) { console.error(err);$('loading').hidden=true;$('fatal-error').hidden=false;$('error-message').textContent='This browser could not initialize the 3D atlas. Try Chrome or Edge with graphics acceleration enabled. '+(err.message||''); }
-  if (!D || !D.stations?.length || !D.segments?.length || !K?.rings?.length || !K?.triangles?.length || !K.bounds) { fatal(new Error('Bundled map data is missing.'));return; }
+  if (!D || !D.stations?.length || !D.segments?.length || !K?.rings?.length || !K?.triangles?.length || !K.bounds || !window.SeoulKpopModels) { fatal(new Error('Bundled map assets are missing.'));return; }
   let gl;
   try {
     gl=canvas.getContext('webgl',{alpha:false,antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});
@@ -416,7 +416,7 @@
     }
     function focusKpop(){
       state.kpop=true;$('kpop-toggle').checked=true;clearAux();focusBounds(P.sites.map(s=>[s.x,s.z]),15);
-      $('map-subtitle').textContent='Seoul · K-pop places (illustrative 3D)';
+      $('map-subtitle').textContent='Seoul · K-pop places';
     }
     function focusNationalLine(i){
       const line=N.lines[i];if(!line)return;
@@ -432,13 +432,13 @@
       resetTrain();state.selectedLine=null;state.selectedStation=null;updateCards();updateLineUI();
       cancelIntro();releaseZoomAnchor();state.kpop=true;$('kpop-toggle').checked=true;
       state.selectedNationalLine=null;state.selectedPlace=id;state.scope='custom';updateScope();
-      goal.x=site.x;goal.z=site.z;goal.y=0;goal.pitch=.73;goal.scale=Math.min(goal.scale,width<600?8:10);
+      goal.x=site.x;goal.z=site.z;goal.y=0;goal.pitch=.67;goal.scale=Math.min(goal.scale,width<600?.7:.6);
       if(width<600)goal.z+=goal.scale*.22;
       updateAuxCards();dirty=true;closeMobile();$('map-subtitle').textContent=`${site.name} · K-pop place`;
     }
     function updateAuxCards(){
       const place=P.sites.find(s=>s.id===state.selectedPlace),pc=$('place-card');pc.hidden=!place;
-      if(place)pc.innerHTML=`<div class="card-top"><span class="eyebrow">K-POP PLACE / 성지</span><button class="card-close" data-close-aux aria-label="Close place details">${icon('close')}</button></div><h2>${escapeHTML(place.name)}</h2><div class="station-english">${escapeHTML(place.ko)}</div><p>${escapeHTML(place.description)}</p><p class="place-visit">${escapeHTML(place.visit)}</p><div class="station-coordinates">${escapeHTML(place.address)}<br>${place.lat.toFixed(5)}° N · ${place.lon.toFixed(5)}° E</div><p class="card-note">Original schematic 3D model. Building shape and height are illustrative.</p><a href="${escapeHTML(place.url)}" target="_blank" rel="noopener noreferrer">Official place information ↗</a>`;
+      if(place)pc.innerHTML=`<div class="card-top"><span class="eyebrow">K-POP PLACE / 성지</span><button class="card-close" data-close-aux aria-label="Close place details">${icon('close')}</button></div><h2>${escapeHTML(place.name)}</h2><div class="station-english">${escapeHTML(place.ko)}</div><p>${escapeHTML(place.description)}</p><p class="place-visit">${escapeHTML(place.visit)}</p><div class="station-coordinates">${escapeHTML(place.address)}<br>${place.lat.toFixed(5)}° N · ${place.lon.toFixed(5)}° E</div><p class="card-note">Exterior-inspired 3D sketch; dimensions and details remain illustrative.</p><a href="${escapeHTML(place.url)}" target="_blank" rel="noopener noreferrer">Official place information ↗</a>`;
       const i=state.selectedNationalLine,nc=$('national-card');nc.hidden=i===null;
       if(i!==null){const line=N.lines[i],count=nationalSegments[i].length;nc.innerHTML=`<div class="card-top"><span class="eyebrow">${escapeHTML(line.group.toUpperCase())} / STATIC RAIL</span><button class="card-close" data-close-aux aria-label="Close route details">${icon('close')}</button></div><h2>${escapeHTML(line.name)}</h2><div class="station-english">${escapeHTML(line.ko||'')}</div><p>${escapeHTML(line.city||'South Korea')} · ${escapeHTML(line.mode||'Passenger rail')}</p><p class="card-note">${count} mapped track segments from OpenStreetMap. This layer shows rail alignment, not live trains, timetables or a guarantee that every service stops here.</p>`;}
     }
@@ -529,51 +529,28 @@
     function drawKpopModels(){
       kpopHits=[];
       if(!state.kpop||!P.sites.length)return;
-      const drawFace=(vertices,fill,stroke)=>{
-        ctx.beginPath();vertices.forEach((v,i)=>{const p=project(...v);if(i)ctx.lineTo(p.x,p.y);else ctx.moveTo(p.x,p.y);});
-        ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=.8;ctx.stroke();}
-      };
       if(cam.scale>70){
         const p=project((126.98-126.98)*88.28,.3,(37.53-37.56)*111.32);
         if(p.x>15&&p.x<width-15&&p.y>105&&p.y<height-45){
           const markerX=p.x+20,markerY=p.y-18;
-          ctx.save();ctx.translate(markerX,markerY);ctx.fillStyle='#c45b9b';ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
-          ctx.beginPath();ctx.moveTo(0,-13);ctx.lineTo(11,0);ctx.lineTo(0,13);ctx.lineTo(-11,0);ctx.closePath();ctx.fill();ctx.stroke();
-          ctx.fillStyle='#ffffff';ctx.font='700 11px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('K',0,1);ctx.restore();
+          ctx.save();ctx.translate(markerX,markerY);ctx.fillStyle='#8b7d6c';ctx.strokeStyle='#ffffff';ctx.lineWidth=2;
+          ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(10,0);ctx.lineTo(0,11);ctx.lineTo(-10,0);ctx.closePath();ctx.fill();ctx.stroke();
+          ctx.fillStyle='#ffffff';ctx.font='700 10px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('K',0,1);ctx.restore();
           kpopHits.push({site:null,x:markerX,y:markerY,r:16});
         }
         return;
       }
-      const size=clamp(cam.scale/height*23,.025,.65),rise=size*1.65;
       const modelLabels=[],labelBoxes=[];
       const shortNames={hybe:'HYBE',sm:'SM',jyp:'JYP',yg:'YG',k_star_road:'K-Star Road',coex_kpop_square:'COEX K-POP',hongdae_kpop_square:'K-Pop Square',hikr_ground:'HiKR Ground',kbs_hall:'KBS Hall',cj_enm:'CJ ENM',mbc_media:'MBC'};
-      for(const site of P.sites){
-        const p=project(site.x,.1,site.z);
-        if(p.x<-35||p.x>width+35||p.y<85||p.y>height+30)continue;
-        const profile={hybe:[.75,.70,1.36,'#bb598e'],sm:[.83,.56,1.10,'#a05cbb'],jyp:[.70,.76,1.22,'#ce6f8d'],yg:[1.05,.67,.82,'#aa69a6'],cj_enm:[.80,.72,1.18,'#786dc0'],mbc_media:[.76,.70,1.28,'#686db9']}[site.id];
-        const x=site.x,z=site.z,w=size*(profile?.[0]??(site.shape==='facade'?1.25:.75)),d=size*(profile?.[1]??(site.shape==='facade'?.38:.72)),h=rise*(profile?.[2]??(site.shape==='dome'?.52:site.shape==='landmark'?.72:1));
-        const base=.12,accent=profile?.[3]??(site.category==='agency'?'#c05a9b':site.category==='broadcast'?'#7b69c5':'#e09349');
-        // Original schematic solids; footprints, heights, signs and windows are illustrative.
-        const A=[x-w,base,z-d],B=[x+w,base,z-d],C=[x+w,base,z+d],E=[x-w,base,z+d];
-        const a=[x-w,base+h,z-d],b=[x+w,base+h,z-d],c=[x+w,base+h,z+d],e=[x-w,base+h,z+d];
-        drawFace([A,B,b,a],'#743e71','#f6d3ed');
-        drawFace([B,C,c,b],'#9a497e','#f6d3ed');
-        drawFace([C,E,e,c],accent,'#f6d3ed');
-        drawFace([E,A,a,e],'#a95a94','#f6d3ed');
-        drawFace([a,b,c,e],site.shape==='dome'?'#f5b882':'#e9a8cf','#fff4fb');
-        if(site.shape==='dome'){
-          drawFace([[x-w*.8,base+h,z-d*.8],[x,base+h+rise*.48,z],[x+w*.8,base+h,z-d*.8]],'#e4a063','#fff4ec');
-          drawFace([[x+w*.8,base+h,z-d*.8],[x,base+h+rise*.48,z],[x+w*.8,base+h,z+d*.8]],'#c77e63','#fff4ec');
-        }else if(site.shape==='landmark'){
-          drawFace([[x-w*.6,base+h,z],[x,base+h+rise*.62,z],[x+w*.6,base+h,z]],'#ffe0a0','#fff4d0');
-        }else{
-          const q=project(x,base+h*.57,z+d+.001),q2=project(x,base+h*.20,z+d+.001);
-          ctx.strokeStyle='#fff4fa';ctx.lineWidth=site.shape==='facade'?3:1.4;ctx.beginPath();ctx.moveTo(q.x-4,q.y);ctx.lineTo(q.x+4,q.y);ctx.moveTo(q2.x-4,q2.y);ctx.lineTo(q2.x+4,q2.y);ctx.stroke();
-        }
-        const pin=project(x,base+h+(site.shape==='dome'?rise*.48:0),z);
-        ctx.beginPath();ctx.arc(pin.x,pin.y,2.4,0,Math.PI*2);ctx.fillStyle='#ffffff';ctx.fill();
-        kpopHits.push({site,x:p.x,y:pin.y,r:Math.max(15,24-cam.scale*.08)});
-        if(state.selectedPlace===site.id||cam.scale<25)modelLabels.push({site,x:pin.x,y:pin.y-8});
+      const visible=P.sites.map(site=>({site,p:project(site.x,.1,site.z)}))
+        .filter(({p})=>p.x>-60&&p.x<width+60&&p.y>65&&p.y<height+45)
+        .sort((a,b)=>a.p.y-b.p.y);
+      for(const {site,p} of visible){
+        const selected=state.selectedPlace===site.id;
+        const hit=window.SeoulKpopModels.draw(ctx,site,project,{selected,dark:window.SeoulTheme.current==='dark',scale:cam.scale,viewportHeight:height});
+        if(!hit)continue;
+        kpopHits.push({site,x:hit.x,y:hit.y,r:hit.r,drawn:hit.drawn});
+        if(selected||cam.scale<25)modelLabels.push({site,x:hit.x,y:hit.topY-5});
       }
       ctx.font='700 10px "Segoe UI",sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';
       for(const label of modelLabels.sort((a,b)=>Number(b.site.id===state.selectedPlace)-Number(a.site.id===state.selectedPlace))){

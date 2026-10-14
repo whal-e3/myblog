@@ -122,9 +122,16 @@ Gangnam tourism, or Korea Tourism Organization pages linked on each record.
 Markers are approximate POI/building centers, not surveyed building footprints.
 Their coordinates are from © OpenStreetMap contributors and remain subject to
 the ODbL attribution and reuse terms above; each record links its OSM feature.
-The procedural 3D representations are schematic original art, without venue
-logos or licensed building models. Office buildings are identified for exterior
-viewing only, and program access is not implied.
+The procedural 3D representations are original exterior-inspired sketches,
+without venue logos or licensed building models. Their dimensions, facade
+patterns and marker positions are approximate. Office buildings are identified
+for exterior viewing only, and program access is not implied.
+
+The visual benchmark was NAVER Map's published [Street View 3D](https://www.navercorp.com/media/pressReleasesDetail?seq=32200)
+and [Flying View 3D](https://www.navercorp.com/en/media/pressReleasesDetail?seq=33482):
+recognizable silhouettes at close range, a highlighted selected place and
+less detail when zoomed out. This project uses none of NAVER's imagery, meshes,
+map tiles or place data.
 
 ## Transformations
 

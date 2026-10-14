@@ -24,6 +24,8 @@ def build(destination: Path) -> Path:
             '<script>\n' + (root / 'src/trains.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/live.js"></script>':
             '<script>\n' + (root / 'src/live.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
+        '<script src="src/kpop-models.js"></script>':
+            '<script>\n' + (root / 'src/kpop-models.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/app.js"></script>':
             '<script>\n' + (root / 'src/app.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
     }

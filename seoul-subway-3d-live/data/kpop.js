@@ -40,7 +40,7 @@ window.KOREA_KPOP_SITES = {
     },
     {
       id: "yg", name: "YG Entertainment", ko: "YG엔터테인먼트",
-      lat: 37.5489197, lon: 126.9077038, category: "agency", shape: "tower",
+      lat: 37.5489197, lon: 126.9077038, category: "agency", shape: "shell",
       address: "7 Huiujeong-ro 1-gil, Mapo-gu, Seoul",
       description: "The distinct Hapjeong headquarters of a major K-pop label.",
       visit: "View from the public street; the headquarters itself is private.",
@@ -49,7 +49,7 @@ window.KOREA_KPOP_SITES = {
     },
     {
       id: "k_star_road", name: "K-Star Road", ko: "한류스타거리",
-      lat: 37.5277862, lon: 127.0413251, category: "public_art", shape: "landmark",
+      lat: 37.5277862, lon: 127.0413251, category: "public_art", shape: "street",
       address: "Apgujeong Rodeo Station area, Gangnam-gu, Seoul",
       description: "Public K-pop-themed walking street known for its GangnamDol art figures.",
       visit: "Open public street; the marker shows the Apgujeong Rodeo end of the route.",
@@ -85,7 +85,7 @@ window.KOREA_KPOP_SITES = {
     },
     {
       id: "kbs_hall", name: "KBS Hall", ko: "KBS홀",
-      lat: 37.5259532, lon: 126.9152896, category: "broadcast", shape: "dome",
+      lat: 37.5259532, lon: 126.9152896, category: "broadcast", shape: "hall",
       address: "359 Yeouidaebang-ro, Yeongdeungpo-gu, Seoul",
       description: "Yeouido KBS venue associated with Music Bank broadcasts.",
       visit: "Exterior is viewable; studio audience access requires official admission.",

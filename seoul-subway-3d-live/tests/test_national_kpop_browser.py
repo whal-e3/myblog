@@ -76,13 +76,26 @@ with sync_playwright() as playwright:
 
     page.evaluate('''() => {const a=__SEOUL_APP__;a.focusKpop();Object.assign(a.cam,a.goal);a.render();}''')
     assert page.evaluate('__SEOUL_APP__.getKpopHits().filter(hit=>hit.site).length') >= 8
+    assert page.evaluate('__SEOUL_APP__.getKpopHits().every(hit=>!hit.drawn)'), 'Overview should use small place markers'
     page.screenshot(path=str(out / 'seoul-kpop-models.png'))
     page.evaluate('''() => {const a=__SEOUL_APP__;a.selectPlace('coex_kpop_square');Object.assign(a.cam,a.goal);a.render();}''')
     assert page.locator('#place-card').is_visible()
     assert 'COEX' in page.locator('#place-card').inner_text()
     assert 'illustrative' in page.locator('#place-card').inner_text().lower()
+    assert page.evaluate('''() => {
+      const a=__SEOUL_APP__, hit=a.getKpopHits().find(h=>h.site?.id==='coex_kpop_square');
+      return a.cam.scale<=1 && !!hit?.drawn;
+    }'''), 'Selected place should zoom close enough to show its 3D form'
     assert page.locator('#place-card a').get_attribute('href').startswith('https://')
     page.screenshot(path=str(out / 'seoul-kpop-place.png'))
+    for landmark in ('hybe', 'yg', 'kbs_hall', 'mbc_media', 'k_star_road'):
+        page.evaluate('''id => {
+          const a=__SEOUL_APP__;a.selectPlace(id);Object.assign(a.cam,a.goal);a.render();
+        }''', landmark)
+        assert page.evaluate('''id => {
+          const a=__SEOUL_APP__;return a.getKpopHits().some(h=>h.site?.id===id&&h.drawn);
+        }''', landmark), landmark
+        page.screenshot(path=str(out / f'seoul-kpop-{landmark}.png'))
     page.locator('#kpop-toggle').uncheck()
     page.evaluate('__SEOUL_APP__.render()')
     assert page.evaluate('__SEOUL_APP__.getKpopHits().length') == 0
@@ -98,6 +111,22 @@ with sync_playwright() as playwright:
     mobile.evaluate('''() => {const a=__SEOUL_APP__;Object.assign(a.cam,a.goal);a.render();}''')
     assert mobile.evaluate('__SEOUL_APP__.getKpopHits().filter(hit=>hit.site).length') > 0
     mobile.screenshot(path=str(out / 'seoul-kpop-mobile.png'))
+    mobile.evaluate('''() => {
+      const a=__SEOUL_APP__;a.selectPlace('yg');Object.assign(a.cam,a.goal);a.render();
+    }''')
+    assert mobile.locator('.train-launcher').is_hidden()
+    assert mobile.evaluate('''() => {
+      const a=__SEOUL_APP__,hit=a.getKpopHits().find(h=>h.site?.id==='yg');
+      if(!hit?.drawn)return false;
+      const v=document.querySelector('#viewport').getBoundingClientRect();
+      const ground=a.project(hit.site.x,.115,hit.site.z);
+      const x=v.left+hit.x,y=v.top+(hit.y+ground.y)/2;
+      return ['#place-card','.view-tools'].every(selector=>{
+        const r=document.querySelector(selector).getBoundingClientRect();
+        return x<r.left||x>r.right||y<r.top||y>r.bottom;
+      });
+    }'''), 'Selected model should remain visible beside mobile overlays'
+    mobile.screenshot(path=str(out / 'seoul-kpop-mobile-place.png'))
     assert not errors_mobile, errors_mobile
     print('PASS mobile place navigation', flush=True)
     mobile.close()

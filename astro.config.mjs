@@ -4,7 +4,7 @@ import sitemap from "@astrojs/sitemap";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 
-const subwayServer = "http://127.0.0.1:8787";
+const subwayServer = process.env.SUBWAY_MAP_PROXY_TARGET || "http://127.0.0.1:8787";
 const liveServer = process.env.SUBWAY_API_PROXY_TARGET || subwayServer;
 
 function localProxy(target, rewrite) {
