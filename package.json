@@ -5,8 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
-    "dev:subway-worker": "wrangler dev --config wrangler.subway-dev.toml --port 8788",
-    "test:subway-worker": "node --test src/worker/subway-feed.test.mjs",
+    "test:worker": "node --test src/worker/index.test.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "qr": "node scripts/gen-qr.mjs"

@@ -123,13 +123,14 @@ with sync_playwright() as p:
     record('train-model-inspector-and-follow-preserved-simulation')
     page.screenshot(path=str(out/'dark-simulated-train.png'))
 
-    page.click('#nav-about');page.locator('#theme-preference').select_option('system')
+    page.locator('#display-options > summary').click()
+    page.locator('#theme-preference').select_option('system')
     assert page.evaluate('SeoulTheme.preference')=='system'
     assert page.evaluate('SeoulTheme.storageKey in __themeStore') is False
     page.emulate_media(color_scheme='dark');page.wait_for_function('SeoulTheme.current==="dark"')
     page.screenshot(path=str(out/'dark-about.png'))
     record('appearance-setting-restores-system-theme')
-    page.click('#close-about')
+    page.locator('#display-options > summary').click()
     page.locator('#theme-toggle').focus();page.keyboard.press('Enter')
     assert page.evaluate('SeoulTheme.current')=='light'
     page.keyboard.press('Space')
@@ -143,8 +144,8 @@ with sync_playwright() as p:
     for width in [390,320]:
         mobile=load(browser,theme='dark',mobile=True,width=width)
         assert not mobile.evaluate('document.documentElement.scrollWidth>innerWidth')
-        assert mobile.locator('#live-badge').is_hidden()
-        buttons=[mobile.locator('#'+i).bounding_box() for i in ['theme-toggle','export']]
+        assert mobile.locator('#live-badge').is_visible()
+        buttons=[mobile.locator('#'+i).bounding_box() for i in ['theme-toggle','nav-about']]
         assert all(b and b['x']>=0 and b['x']+b['width']<=width for b in buttons)
         assert buttons[0]['x']+buttons[0]['width']<=buttons[1]['x']+1
         mobile.locator('#theme-toggle').tap();assert mobile.evaluate('SeoulTheme.current')=='light'
@@ -187,10 +188,11 @@ with sync_playwright() as p:
                for p in country['corners']),country
     assert animated.locator('#scope-country').get_attribute('class')=='active'
     assert animated.locator('#viewport').get_attribute('class').find('country-scope')>=0
-    assert animated.locator('.live-notice').is_hidden()
+    assert animated.locator('.live-notice').count() == 0
     record('country-control-fits-full-geographic-outline')
     close_offline(animated)
     interrupted=load(browser,reduced_motion=False)
+    interrupted.locator('#camera-options > summary').click()
     interrupted.click('#rotate-right')
     yaw=interrupted.evaluate('__SEOUL_APP__.goal.yaw')
     interrupted.wait_for_timeout(3600)

@@ -2,7 +2,6 @@
 """Build a standalone map preview with offline simulated trains."""
 from pathlib import Path
 import argparse
-from shutil import copyfile
 
 
 def build(destination: Path) -> Path:
@@ -19,8 +18,6 @@ def build(destination: Path) -> Path:
             '<script>\n' + (root / 'data/korea.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="data/national-rail.js"></script>':
             '<script>\n' + (root / 'data/national-rail.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
-        '<script src="data/kpop.js"></script>':
-            '<script>\n' + (root / 'data/kpop.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="data/train-density-profile.js"></script>':
             '<script>\n' + (root / 'data/train-density-profile.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/trains.js"></script>':
@@ -29,8 +26,6 @@ def build(destination: Path) -> Path:
             '<script>\n' + (root / 'src/live.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/simulation.js"></script>':
             '<script>\n' + (root / 'src/simulation.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
-        '<script src="src/kpop-models.js"></script>':
-            '<script>\n' + (root / 'src/kpop-models.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
         '<script src="src/app.js"></script>':
             '<script>\n' + (root / 'src/app.js').read_text(encoding='utf-8').replace('</script', '<\\/script') + '\n</script>',
     }
@@ -40,15 +35,6 @@ def build(destination: Path) -> Path:
         html = html.replace(marker, content)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(html, encoding="utf-8")
-    # Keep selected-place photos alongside the standalone preview. The source
-    # directory contains only reviewed, credited WebP assets.
-    photo_dir = root / 'assets' / 'photos'
-    if photo_dir.is_dir():
-        preview_photos = destination.parent / 'assets' / 'photos'
-        preview_photos.mkdir(parents=True, exist_ok=True)
-        for photo in photo_dir.glob('*.webp'):
-            if photo.is_file() and not photo.is_symlink():
-                copyfile(photo, preview_photos / photo.name)
     return destination
 
 

@@ -2,30 +2,14 @@
 
 // Explicit, release-only copy of the files needed at /miniprj/seoul-subway/.
 // Nothing calls this script from the normal Astro build.
-import { copyFile, mkdir, readdir, stat } from 'node:fs/promises';
+import { copyFile, mkdir, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SUBWAY_ASSETS } from './subway-assets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'seoul-subway-3d-live');
-const files = [
-  'index.html',
-  'src/styles.css',
-  'src/theme.js',
-  'src/trains.js',
-  'src/live.js',
-  'src/simulation.js',
-  'src/kpop-models.js',
-  'src/app.js',
-  'data/network.js',
-  'data/korea.js',
-  'data/national-rail.js',
-  'data/kpop.js',
-  'data/train-density-profile.js',
-  'data/train-density-profile.json',
-  'LICENSE',
-  'LICENSE-DATA.md',
-];
+const files = SUBWAY_ASSETS;
 
 function usage() {
   throw new Error('Usage: node scripts/stage-subway.mjs --out <built-site-directory>');
@@ -54,14 +38,4 @@ for (const file of files) {
   await mkdir(dirname(target), { recursive: true });
   await copyFile(join(source, file), target);
 }
-const photos = await readdir(join(source, 'assets', 'photos'), { withFileTypes: true });
-let photoCount = 0;
-for (const photo of photos) {
-  if (!photo.isFile() || !/^[a-z0-9_-]+\.webp$/.test(photo.name)) continue;
-  const path = join('assets', 'photos', photo.name);
-  const target = join(destination, path);
-  await mkdir(dirname(target), { recursive: true });
-  await copyFile(join(source, path), target);
-  photoCount++;
-}
-console.log(`Staged ${files.length + photoCount} subway assets in ${destination}`);
+console.log(`Staged ${files.length} subway assets in ${destination}`);

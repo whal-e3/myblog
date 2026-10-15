@@ -109,7 +109,7 @@ with sync_playwright() as playwright:
       return {clock:app.getTrainClock(), x:pose.x, z:pose.z};
     }''')
     page.locator('#live-toggle').click()  # Resume motion.
-    assert page.locator('#motion-toggle').is_checked()
+    assert page.locator('#live-toggle').get_attribute('aria-pressed') == 'true'
     page.wait_for_timeout(1400)
     after = page.evaluate('''() => {
       const app=window.__SEOUL_APP__, train=app.fleet.trains[app.state.selectedTrain];
@@ -121,7 +121,7 @@ with sync_playwright() as playwright:
     assert displacement > .0005, (displacement, before, after)
 
     page.locator('#live-toggle').click()  # Pause motion.
-    assert not page.locator('#motion-toggle').is_checked()
+    assert page.locator('#live-toggle').get_attribute('aria-pressed') == 'false'
     paused = page.evaluate('''() => {
       const app=window.__SEOUL_APP__, train=app.fleet.trains[app.state.selectedTrain];
       const pose=app.simulation.pose(train, app.getTrainClock(), .03);
@@ -134,7 +134,9 @@ with sync_playwright() as playwright:
       return {clock:app.getTrainClock(), x:pose.x, z:pose.z};
     }''')
     assert still == paused, (paused, still)
+    page.locator('#live-badge').click()
     page.locator('#live-refresh').click()
+    page.locator('#close-about').click()
     assert page.evaluate('__SEOUL_APP__.getTrainClock()') == 0
     assert 'SIMULATED POSITION · NOT LIVE' in page.locator('#train-model-status').inner_text()
     assert_offline(page, requests)

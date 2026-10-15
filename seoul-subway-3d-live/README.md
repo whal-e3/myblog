@@ -1,7 +1,7 @@
 # Seoul Subsurface
 
 An interactive 3D map of 24 Seoul-area rail routes, with a South Korea land
-backdrop, static national passenger-rail context, and a curated K-pop place layer.
+backdrop and static national passenger-rail context.
 The four-car train models move on mapped rails, but **every displayed train is
 simulated and not live**. Its identity, count, position, direction, timing, and
 endpoint are invented for the visualization. Do not use the animation for travel
@@ -18,7 +18,18 @@ rail corridors remain static.
 
 ## Preview
 
-From this directory:
+From the blog repository root:
+
+```sh
+npm run dev
+```
+
+Open `/blog/seoul-subway/` or `/miniprj/seoul-subway/` on the local URL printed
+by Astro (normally `http://localhost:4321`). Astro serves the map's allowlisted
+static files directly; no Python server, API key, or proxy configuration is
+needed for the simulation. Reload the map after editing its files.
+
+For a standalone preview or optional backend diagnostics, from this directory:
 
 ```sh
 python3 server.py --port 8787 --open
@@ -37,18 +48,23 @@ python3 tools/build.py dist/seoul-subway-3d-live.html
 
 Open that HTML file directly in a browser. It includes the same simulated
 trains and needs no server. The map normally opens over South Korea, then zooms
-and tilts into Seoul. Use the scope buttons to switch between South Korea,
-Network, and central Seoul. Drag or use the arrow controls to pan; scroll to
-zoom; use right-drag, Shift-drag, or the rotate buttons to turn the view.
+and tilts into Seoul. The `Seoul area` and `South Korea` buttons change the
+map area. Drag to pan and scroll to zoom. Open `Move & rotate` in the camera
+toolbar for directional controls, fit, auto rotation, and fullscreen.
+Right-drag or Shift-drag also rotates the map.
 Ctrl+scroll pans vertically and Shift+scroll pans horizontally. The train
 inspector can follow a simulated model. Space pauses its motion. Reduced-motion
 settings pause train motion and skip the opening camera animation.
 
-The `Around Korea` sidebar section toggles static regional metro/light rail,
-intercity passenger-rail corridors, and Seoul K-pop places. Those national
+The bottom bar keeps one simulation notice, a pause/resume control, and the
+train inspector within reach. `Display options` holds labels, train size, and
+theme preferences. `About & help` contains shortcuts, simulation details,
+credits, and map exports.
+
+The `Elsewhere in Korea` sidebar section toggles static regional metro/light rail and
+intercity passenger-rail corridors. Those national
 corridors are physical track alignments, not a complete service timetable or
-moving train layer. The K-pop buildings are original, approximate exterior
-sketches; see [model references](MODEL-REFERENCES.md).
+moving train layer.
 
 ## Aggregate count profile
 

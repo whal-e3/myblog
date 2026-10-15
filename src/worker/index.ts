@@ -27,20 +27,11 @@
 //
 // Everything else falls through to static assets (Astro build output).
 
-import { SeoulLine2Feed } from "./subway-feed";
-import { requestedLines } from "./subway-core";
-export { SeoulLine2Feed };
-
 // Minimal runtime types for the Cloudflare globals used by this Worker.
 interface AssetFetcher { fetch(request: Request): Promise<Response> }
 declare class HTMLRewriter {
   on(selector: string, handlers: { element(el: { setAttribute(name: string, value: string): void }): void }): this;
   transform(response: Response): Response;
-}
-
-interface SubwayFeedNamespace {
-  idFromName(name: string): unknown;
-  get(id: unknown): { fetch(request: Request): Promise<Response> };
 }
 
 interface Env {
@@ -49,9 +40,6 @@ interface Env {
   CMS_PASSWORD: string;
   GITHUB_REPO: string;
   SITE_ORIGIN: string;
-  // These bindings exist only in wrangler.subway-dev.toml until publication.
-  SUBWAY_DEV_ENABLED?: string;
-  SEOUL_LINE2_FEED?: SubwayFeedNamespace;
 }
 
 const CSRF_COOKIE = "decap_csrf";
@@ -61,12 +49,6 @@ const FAILED_LOGIN_DELAY_MS = 1000;
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
-    // Production wrangler.toml has no enable flag or Durable Object binding.
-    if (env.SUBWAY_DEV_ENABLED === "true" && env.SEOUL_LINE2_FEED &&
-        (url.pathname === "/api/live/status" || url.pathname === "/api/live/positions")) {
-      return handleSubway(request, url, env.SEOUL_LINE2_FEED);
-    }
 
     // Refuse OAuth on non-prod origins (workers.dev, preview deploys).
     if (url.origin !== env.SITE_ORIGIN) {
@@ -91,32 +73,6 @@ export default {
     return serveAssets(request, env);
   },
 };
-
-async function handleSubway(request: Request, url: URL, namespace: SubwayFeedNamespace): Promise<Response> {
-  const json = (body: unknown, status: number, extra: Record<string, string> = {}) =>
-    new Response(JSON.stringify(body), {
-      status, headers: { ...securityHeaders(), "Content-Type": "application/json; charset=utf-8", ...extra },
-    });
-  if (request.method !== "GET") return json({ error: "Method not allowed." }, 405, { Allow: "GET" });
-  if (request.headers.get("Origin") && request.headers.get("Origin") !== url.origin) {
-    return json({ error: "Cross-origin access is not allowed." }, 403);
-  }
-  if (request.headers.get("Sec-Fetch-Site") === "cross-site") {
-    return json({ error: "Cross-site access is not allowed." }, 403);
-  }
-  if (url.pathname === "/api/live/status" && url.search) {
-    return json({ error: "Unexpected query parameters." }, 400);
-  }
-  if (url.pathname === "/api/live/positions") {
-    const entries = [...url.searchParams.entries()];
-    if (entries.length > 1 || (entries.length === 1 &&
-        (entries[0][0] !== "lines" || !requestedLines(entries[0][1])))) {
-      return json({ error: "Invalid line selection." }, 400);
-    }
-  }
-  const stub = namespace.get(namespace.idFromName("line-2"));
-  return stub.fetch(request);
-}
 
 // ─── Static assets + country-based default language ─────────────────────────
 // The site language defaults to the visitor's country (Korea → Korean,
