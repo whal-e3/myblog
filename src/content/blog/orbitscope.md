@@ -39,14 +39,17 @@ Connect an antenna to a compatible software-defined radio (SDR), then plug the S
 
 Let OrbitScope use your location, or enter it manually. Browse predicted passes and choose a supported satellite signal. OrbitScope shows when the satellite is expected to be visible, its direction and elevation, and the listed receive frequency.
 
-OrbitScope currently supports these receive-side modes:
+OrbitScope currently supports these receive formats:
 
-| Mode | What the app produces |
+| Format | What OrbitScope produces |
 | --- | --- |
-| Narrowband FM | Live audio, with a saved audio recording/WAV when capture succeeds. It does **not** transcribe speech. |
-| 1200-baud AFSK/AX.25 | CRC-verified packets, including compatible APRS/beacon data. |
-| Meteor M2-x 72k LRPT | Checked frames and a partial grayscale weather-image PNG when enough data decodes. **RTL-SDR only** in the current app. |
-| PD120 SSTV | An automatic image-decoding attempt from FM audio; saves a PNG if successful. |
+| Narrowband FM voice | Live audio and a saved WAV; no speech transcription |
+| 1200-baud AFSK / AX.25 | CRC-verified packets, including compatible APRS beacons |
+| 9600-baud G3RUH / AX.25 | CRC-verified packets — **experimental**, not yet verified on-air |
+| Meteor M2-x 72k LRPT | Checked frames and, when enough data decodes, a partial grayscale weather image — RTL-SDR only |
+| PD120 SSTV | An image-decoding attempt from recorded FM audio |
+| Martin M1 SSTV | An image-decoding attempt from recorded FM audio — newly implemented, not yet verified on-air |
+| CW / Morse | Post-pass text *candidates* from saved I/Q — experimental, RTL-SDR only; not a verified beacon decode |
 
 ### 4. Start receiving
 
