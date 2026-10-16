@@ -7,11 +7,13 @@ interface Props {
   description: string;
   date: Date;
   tags: string[];
+  logo?: string;
+  logoAlt?: string;
   comments?: boolean;
   sidebar?: boolean;
 }
 
-const { title, description, date, tags, comments = true, sidebar = false } = Astro.props;
+const { title, description, date, tags, logo, logoAlt, comments = true, sidebar = false } = Astro.props;
 
 function formatDate(d: Date) {
   return d.toLocaleDateString("en-US", {
@@ -24,7 +26,7 @@ function formatDate(d: Date) {
 
 <BaseLayout title={title} description={description} sidebar={sidebar}>
   <article class="post-paper">
-    <div class="post-header">
+    <div class:list={["post-header", { "has-logo": logo }]}>
       <h1 class="post-title">{title}</h1>
       <div class="post-meta">
         <time datetime={date.toISOString()}>{formatDate(date)}</time>
@@ -36,6 +38,7 @@ function formatDate(d: Date) {
           </div>
         )}
       </div>
+      {logo && <img class="post-logo" src={logo} alt={logoAlt ?? `${title} logo`} />}
     </div>
     <div class="prose">
       <slot />
@@ -46,6 +49,17 @@ function formatDate(d: Date) {
 </BaseLayout>
 
 <style>
+  .post-header.has-logo {
+    margin-bottom: 22px;
+  }
+
+  .post-logo {
+    display: block;
+    width: 104px;
+    height: auto;
+    margin: 18px auto 0;
+  }
+
   /* Subtle dark backdrop behind the post so prose stays readable on the
      nebula background. Same look as the CV page's .cv-paper for consistency. */
   .post-paper {

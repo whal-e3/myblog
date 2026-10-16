@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 108 108">
+  <title>OrbitScope mission-console logo</title>
+  <desc>An open soft-green orbital ring and inclined orbit with an amber satellite and two radio arcs.</desc>
+  <path d="M31.7,77.67 A45,9 -28 0,1 14.27,79.13 A45,9 -28 0,1 93.73,36.87 A45,9 -28 0,1 82.78,50.51"
+    fill="none" stroke="#9AD6AE" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M70.2,35.4 A27,27 0,0 0,28.5,65.9 M32.3,73.1 A27,27 0,0 0,79.7,48.7"
+    fill="none" stroke="#9AD6AE" stroke-width="6.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M76.5,33.5 Q77.5,32.5 78.5,33.5 L83,38 Q84,39 83,40 L78.5,44.5 Q77.5,45.5 76.5,44.5 L72,40 Q71,39 72,38 Z"
+    fill="#E7BE78"/>
+  <path d="M79,25 C84,26 87,29 88,33 M81,17 C89,19 94,25 96,32"
+    fill="none" stroke="#E7BE78" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
