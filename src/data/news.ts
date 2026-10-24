@@ -11,6 +11,12 @@ export interface NewsItem {
 
 export const news: NewsItem[] = [
   {
+    date: "2026-10-22",
+    text: "Our PADO-SAT team at Kyung Hee University was selected as one of five teams in the basic category of the 7th CubeSat Competition.",
+    textKo: "제가 참여하는 경희대학교 PADO-SAT 팀이 제7회 초소형(큐브)위성 경연대회 초급 부문 5개 최종 선정팀 중 하나로 선정됐습니다.",
+    link: "https://www.dongascience.com/ko/news/80495",
+  },
+  {
     date: "2026-07-02",
     text: "Heading to DEF CON 2026 Aerospace Village — Aug 6–9, Las Vegas Convention Center (West Hall). I helped build 4 hands-on satellite-hacking scenarios on OpenVSA (my open-source satellite ground station), and as its author I'll be there to help anyone who wants to try them.",
     textKo: "DEF CON 2026 Aerospace Village에 참가합니다 — 8월 6–9일, Las Vegas Convention Center (West Hall). 제가 개발한 오픈소스 위성 지상국 OpenVSA를 사용한 실습형 위성 해킹 시나리오 4종의 제작에 참여했으며, 개발자로서 현장에서 관심 있는 분들의 실습을 직접 지원합니다.",
