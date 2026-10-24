@@ -56,7 +56,7 @@ const homeProjects = (await getCollection("projects"))
     <div class="project-grid">
       {homeProjects.map((p) => (
         <a href="/projects" class="project-card">
-          <div class="project-thumb">
+          <div class:list={["project-thumb", { "project-thumb--pair": !p.data.coverVideo && !!p.data.coverSecondary }]}>
             {p.data.coverVideo ? (
               <video
                 src={p.data.coverVideo}
@@ -69,13 +69,24 @@ const homeProjects = (await getCollection("projects"))
                 preload="auto"
               ></video>
             ) : (
-              <img
-                src={p.data.cover}
-                alt={p.data.title}
-                width="1600"
-                height="900"
-                loading="eager"
-              />
+              <>
+                <img
+                  src={p.data.cover}
+                  alt={p.data.coverAlt ?? p.data.title}
+                  width="1600"
+                  height="900"
+                  loading="eager"
+                />
+                {p.data.coverSecondary && (
+                  <img
+                    src={p.data.coverSecondary}
+                    alt={p.data.coverSecondaryAlt ?? p.data.title}
+                    width="680"
+                    height="408"
+                    loading="eager"
+                  />
+                )}
+              </>
             )}
           </div>
           <div class="project-body">
@@ -316,10 +327,23 @@ const homeProjects = (await getCollection("projects"))
     filter: brightness(0.85) saturate(0.88);
     transition: transform 0.4s ease, filter 0.3s ease;
   }
+  .project-thumb--pair {
+    aspect-ratio: 16 / 5;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .project-thumb--pair img {
+    object-fit: contain;
+  }
   .project-card:hover .project-thumb img,
   .project-card:hover .project-thumb video {
     transform: scale(1.04);
     filter: brightness(1) saturate(1);
+  }
+  .project-card:hover .project-thumb--pair img {
+    transform: none;
   }
   .project-body {
     padding: 16px 18px 18px;

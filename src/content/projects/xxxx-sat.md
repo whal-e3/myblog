@@ -9,6 +9,9 @@ status: active
 featured: true
 order: -2
 cover: /assets/content/project/xxxx_sat/cover.webp
+coverAlt: Poster for the 7th CubeSat Competition
+coverSecondary: /assets/content/project/xxxx_sat/selected-teams-202610.jpg
+coverSecondaryAlt: Group photo at the 7th CubeSat Competition selection ceremony
 links:
   - label: Final selection (KARI)
     url: https://ksatdb.kari.re.kr/media/news/view.do?articleNo=326&page=1

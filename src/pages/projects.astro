@@ -52,7 +52,7 @@ function formatDate(d: Date) {
     {rendered.map(({ project, Content, linkedPosts }) => (
       <article class={`project ${project.data.featured ? "is-featured" : ""}`}>
         {(project.data.cover || project.data.coverVideo) && (
-          <div class="project-cover">
+          <div class:list={["project-cover", { "project-cover--pair": !project.data.coverVideo && !!project.data.coverSecondary }]}>
             {project.data.coverVideo ? (
               <video
                 src={project.data.coverVideo}
@@ -65,13 +65,24 @@ function formatDate(d: Date) {
                 preload="auto"
               />
             ) : (
-              <img
-                src={project.data.cover}
-                alt={project.data.title}
-                width="1600"
-                height="700"
-                loading="eager"
-              />
+              <>
+                <img
+                  src={project.data.cover}
+                  alt={project.data.coverAlt ?? project.data.title}
+                  width="1600"
+                  height="700"
+                  loading="eager"
+                />
+                {project.data.coverSecondary && (
+                  <img
+                    src={project.data.coverSecondary}
+                    alt={project.data.coverSecondaryAlt ?? project.data.title}
+                    width="680"
+                    height="408"
+                    loading="eager"
+                  />
+                )}
+              </>
             )}
           </div>
         )}
@@ -172,6 +183,16 @@ function formatDate(d: Date) {
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+  .project-cover--pair {
+    aspect-ratio: 16 / 5;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .project-cover--pair img {
+    object-fit: contain;
   }
 
   .project-info {

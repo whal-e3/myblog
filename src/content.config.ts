@@ -32,6 +32,9 @@ const projects = defineCollection({
     featured: z.boolean().default(false),
     order: z.number().default(0),
     cover: z.string().optional(),
+    coverAlt: z.string().optional(),
+    coverSecondary: z.string().optional(),
+    coverSecondaryAlt: z.string().optional(),
     coverVideo: z.string().optional(),
     links: z
       .array(z.object({ label: z.string(), url: z.string() }))
