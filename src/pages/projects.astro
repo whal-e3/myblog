@@ -5,8 +5,7 @@ import T from "../components/T.astro";
 import { getCollection, render } from "astro:content";
 import { marked } from "marked";
 
-// Load projects, sort chronologically (most recent first).
-// `order` is the chronological rank: 0 = most recent, higher = older.
+// Load projects in display order (lower `order` appears first).
 const projects = (await getCollection("projects")).sort(
   (a, b) => a.data.order - b.data.order,
 );

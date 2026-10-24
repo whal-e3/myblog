@@ -19,9 +19,9 @@ const recent = [...allPosts]
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);
 
-// Latest 4 projects, by the same chronological order used on /projects
-// (lower order = more recent).
-const latestProjects = (await getCollection("projects"))
+// First 4 projects, by the same display order used on /projects.
+// (lower order appears first).
+const homeProjects = (await getCollection("projects"))
   .sort((a, b) => a.data.order - b.data.order)
   .slice(0, 4);
 ---
@@ -50,11 +50,11 @@ const latestProjects = (await getCollection("projects"))
     </div>
   </section>
 
-  {/* ── Latest Projects ── */}
+  {/* ── Projects ── */}
   <section class="home-section">
     <h2 class="section-title">// Projects</h2>
     <div class="project-grid">
-      {latestProjects.map((p) => (
+      {homeProjects.map((p) => (
         <a href="/projects" class="project-card">
           <div class="project-thumb">
             {p.data.coverVideo ? (

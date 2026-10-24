@@ -7,7 +7,7 @@ bodyKo: |
 period: "2026-06 – present"
 status: active
 featured: true
-order: 2
+order: -2
 cover: /assets/content/project/xxxx_sat/cover.webp
 links:
   - label: Final selection (KARI)
