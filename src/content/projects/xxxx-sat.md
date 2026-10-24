@@ -8,7 +8,7 @@ period: "2026-06 – present"
 status: active
 featured: true
 order: -2
-cover: /assets/content/project/xxxx_sat/cover.webp
+cover: /assets/content/project/xxxx_sat/competition-poster-full.jpg
 coverAlt: Poster for the 7th CubeSat Competition
 coverSecondary: /assets/content/project/xxxx_sat/selected-teams-202610.jpg
 coverSecondaryAlt: Group photo at the 7th CubeSat Competition selection ceremony
